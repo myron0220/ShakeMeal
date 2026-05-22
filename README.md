@@ -258,6 +258,7 @@ curl "http://localhost:8080/api/v1/shake?lat=37.7749&lng=-122.4194"
 | iOS — Theme (Colors, Typography) | ✅ Done | System-adaptive colors (`UIColor`) |
 | iOS — Tested on simulator | ✅ Done | iPhone 16, iOS 17 — all screens verified |
 | iOS — Real API integration | ✅ Done | `APIClient` wired, end-to-end verified on simulator |
+| iOS — Dice rolling animation + smooth transitions | ✅ Done | ⚀–⚅ cycling with spring rotation/bounce; spring transitions between all states; no layout jump |
 | iOS — StoreKit 2 Paywall | 🔜 Pending | |
 | Backend — Go scaffold | ✅ Done | Gin + Viper + Zap, runs on :8080 |
 | Backend — `/health` + `/api/v1/shake` | ✅ Done | Mock provider (no API key needed) |
