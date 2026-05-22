@@ -47,7 +47,7 @@ Sentry + PostHog
 | **Database**       | PostgreSQL                        | Users, favorites, history, preferences    |
 | **Cache**          | PostgreSQL                        | Places cache table, add Redis when needed |
 | **Places Data**    | Google Places API                 | Best global coverage, cached to save $$   |
-| **Auth**           | Anonymous → Sign in with Apple + JWT | Zero-friction onboarding               |
+| **Auth**           | Email/Phone + Password · Sign in with Apple · JWT | Zero-friction onboarding  |
 | **Hosting**        | Railway / Fly.io                  | Handles SSL, reverse proxy, load balancing|
 | **Errors**         | Sentry                            | iOS + Go in one place                     |
 | **Analytics**      | PostHog                           | Funnels, retention, open-source           |
@@ -86,6 +86,9 @@ ShakeMeal/
 │       │   └── ContentView.swift              # Root TabView (Shake / History / Favorites)
 │       │
 │       ├── Core/
+│       │   ├── Auth/
+│       │   │   ├── AuthManager.swift          # ObservableObject: register/login/Apple sign-in/sign-out
+│       │   │   └── KeychainHelper.swift       # Save/load/delete tokens from Keychain
 │       │   ├── Config/
 │       │   │   └── AppConfig.swift            # Base URL (localhost in DEBUG, prod in RELEASE)
 │       │   ├── Location/
@@ -107,9 +110,11 @@ ShakeMeal/
 │       │   ├── Filters/
 │       │   │   └── FilterView.swift           # Radius / cuisine / price pickers
 │       │   ├── History/
-│       │   │   └── HistoryView.swift          # Past shakes list
-│       │   └── Favorites/
-│       │       └── FavoritesView.swift        # Saved restaurants list
+│       │   │   └── HistoryView.swift          # Past shakes list (mock data)
+│       │   ├── Favorites/
+│       │   │   └── FavoritesView.swift        # Saved restaurants list (mock data)
+│       │   └── Profile/
+│       │       └── ProfileView.swift          # Sign in / Register form + signed-in view
 │       │
 │       ├── UI/
 │       │   ├── Components/
@@ -133,25 +138,34 @@ ShakeMeal/
     │   ├── api/
     │   │   ├── router.go                      # Gin router + middleware wiring
     │   │   ├── middleware/
-    │   │   │   └── logger.go                  # Structured request logging (zap)
+    │   │   │   ├── logger.go                  # Structured request logging (zap)
+    │   │   │   └── auth.go                    # RequireAuth — JWT Bearer middleware
     │   │   └── handlers/
     │   │       ├── health.go                  # GET /health
-    │   │       └── restaurants.go             # GET /api/v1/shake
+    │   │       ├── restaurants.go             # GET /api/v1/shake
+    │   │       └── auth.go                    # POST /auth/register · /login · /apple · /refresh
+    │   ├── repository/
+    │   │   └── user_repo.go                   # Postgres CRUD for users
     │   ├── service/
-    │   │   └── shake_service.go               # Fetch + filter + randomise logic
+    │   │   ├── shake_service.go               # Fetch + filter + randomise logic
+    │   │   └── auth_service.go                # Register, Login, SignInWithApple, RefreshTokens
     │   ├── providers/
     │   │   ├── interface.go                   # PlacesProvider interface
     │   │   ├── google.go                      # Google Places API implementation
     │   │   └── mock.go                        # Mock provider (no API key needed)
-    │   └── utils/apperrors/
-    │       ├── errors.go                      # Typed app errors
-    │       └── validation.go                  # Friendly validation error formatter
+    │   └── utils/
+    │       ├── apperrors/
+    │       │   ├── errors.go                  # Typed app errors
+    │       │   └── validation.go              # Friendly validation error formatter
+    │       └── jwtutil/
+    │           └── jwt.go                     # GenerateAccess / GenerateRefresh / Verify
     ├── migrations/
     │   ├── 000001_create_users.up/down.sql
     │   ├── 000002_create_user_preferences.up/down.sql
     │   ├── 000003_create_favorites.up/down.sql
     │   ├── 000004_create_shake_history.up/down.sql
-    │   └── 000005_create_places_cache.up/down.sql
+    │   ├── 000005_create_places_cache.up/down.sql
+    │   └── 000006_add_password_phone.up/down.sql  # phone + password_hash columns
     ├── docker/
     │   ├── Dockerfile                         # Multi-stage build
     │   └── docker-compose.yml                 # Local: Go + Postgres
