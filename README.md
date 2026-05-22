@@ -201,50 +201,175 @@ GET    /health
 ## Database Schema
 
 ```
-users            → id, apple_id, email, is_pro, device_id, deleted_at
+users            → id, apple_id, device_id, email, phone, name,
+                   password_hash (bcrypt), is_pro, created_at, deleted_at
 user_preferences → user_id, default_radius, cuisines[], price_levels[]
-favorites        → id, user_id, place_id, name, address, lat, lng, rating
-shake_history    → id, user_id, place_id, name, address, lat, lng, shook_at
-places_cache     → place_id, data (jsonb), lat, lng, cached_at
+favorites        → id, user_id, place_id, name, address, cuisine, rating, price_level, lat, lng, created_at
+shake_history    → id, user_id, place_id, name, address, cuisine, rating, price_level, lat, lng, shook_at
+places_cache     → cache_key, data (jsonb), cached_at
 ```
+
+Migrations live in `backend/migrations/` and are numbered sequentially (`000001` → `000006`).  
+`password_hash` is never returned by any API endpoint.
 
 ---
 
 ## Getting Started
 
+### Prerequisites
+
+| Tool | Install | Required for |
+|---|---|---|
+| Xcode 15+ | Mac App Store | iOS build |
+| XcodeGen | `brew install xcodegen` | iOS project generation |
+| Go 1.25+ | `brew install go` | Backend |
+| Docker Desktop | [docker.com](https://www.docker.com/products/docker-desktop/) | Local Postgres |
+
+---
+
 ### iOS
 
 ```bash
-# Install XcodeGen (one-time)
-brew install xcodegen
-
-# Generate Xcode project and open
 cd ios
+
+# 1. Generate Xcode project (run once, and after editing project.yml)
 xcodegen generate
+
+# 2. Open in Xcode
 open ShakeMeal.xcodeproj
 ```
 
-> The app runs immediately with mock data.
-> Shake the simulator via **Device → Shake**, keyboard shortcut `Cmd+Ctrl+Z`, or tap **Shake Now**.
+**Run on simulator (command line):**
+```bash
+# Build
+xcodebuild -project ShakeMeal.xcodeproj -scheme ShakeMeal \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -configuration Debug build
+
+# Grant location permission (one-time per fresh install)
+xcrun simctl privacy booted grant location com.shakemeal.app
+
+# Install & launch
+xcrun simctl install booted \
+  ~/Library/Developer/Xcode/DerivedData/ShakeMeal-*/Build/Products/Debug-iphonesimulator/ShakeMeal.app
+xcrun simctl launch booted com.shakemeal.app
+```
+
+**Trigger a shake (simulator):**
+- Keyboard shortcut: `Cmd + Ctrl + Z`
+- Menu: **Device → Shake**
+- Or tap the **Shake Now** button on screen
+
+> **Note:** The app targets `localhost:8080` in DEBUG builds. Start the backend first if you want live API calls; the app works with mock data even without it.
+>
 > Before submitting to the App Store, add your Apple Team ID to `ios/project.yml`.
+
+---
 
 ### Backend
 
+#### 1. Environment setup (one-time)
+
 ```bash
 cd backend
-cp .env.example .env          # set GOOGLE_PLACES_API_KEY (optional — mock is used if missing)
+cp .env.example .env
+```
 
-# Run with local Postgres
-make docker-db                # starts Postgres only
-make migrate                  # run SQL migrations (requires: brew install golang-migrate)
-make run                      # starts API at localhost:8080
+Edit `.env` — the only required change for local dev:
+```
+# Optional — mock provider is used automatically when this is missing
+GOOGLE_PLACES_API_KEY=your_key_here
 
-# Or run everything in Docker
-make docker-up
+# Generate a strong secret (run once):
+# openssl rand -hex 32
+JWT_SECRET=change_me_to_a_random_secret_at_least_32_chars
+```
 
-# Smoke test
+#### 2. Start Postgres
+
+```bash
+# Starts Postgres on port 5433 (avoids conflict with a local Postgres.app on 5432)
+make docker-db
+```
+
+> **Port conflict:** If you have Postgres.app or a local `postgres` process running on port 5432,
+> Docker maps to 5433 — the `DATABASE_URL` in `.env.example` already uses 5433.
+
+#### 3. Run migrations
+
+```bash
+# Recommended: run migrations directly via Docker (no extra CLI needed)
+for f in migrations/*.up.sql; do
+  docker exec -i $(docker ps -qf name=postgres) psql -U shakemeal -d shakemeal < "$f"
+done
+
+# Alternative: golang-migrate CLI (brew install golang-migrate)
+make migrate
+```
+
+#### 4. Start the server
+
+```bash
+make run          # go run ./cmd/server — hot-reload friendly
+# or
+make build        # compiles to bin/shakemeal
+./bin/shakemeal
+```
+
+Server starts on `http://localhost:8080`.
+
+#### 5. Smoke test
+
+```bash
+# Health check
 curl http://localhost:8080/health
+
+# Random restaurant (mock data)
 curl "http://localhost:8080/api/v1/shake?lat=37.7749&lng=-122.4194"
+
+# Register an account
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"identifier":"you@example.com","password":"hunter42!","name":"Your Name"}'
+
+# Sign in
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"identifier":"you@example.com","password":"hunter42!"}'
+
+# Phone number works too
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"identifier":"+14155551234","password":"s3cur3p@ss"}'
+```
+
+#### 6. Inspect the database
+
+```bash
+# Connect to Postgres inside Docker
+docker exec -it $(docker ps -qf name=postgres) psql -U shakemeal -d shakemeal
+
+# Useful queries
+\dt                            -- list tables
+SELECT * FROM users;
+SELECT * FROM shake_history;
+SELECT * FROM favorites;
+```
+
+#### Docker (full stack — Go + Postgres together)
+
+```bash
+make docker-up    # builds Go image + starts Postgres, app on :8080
+make docker-down  # stop everything
+```
+
+#### Other Make targets
+
+```bash
+make test         # go test ./... -v
+make tidy         # go mod tidy
+make migrate-down # roll back last migration
+make migrate-reset # drop all tables (destructive)
 ```
 
 ---
