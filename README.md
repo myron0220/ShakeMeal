@@ -102,7 +102,7 @@ ShakeMeal/
 │       ├── Features/
 │       │   ├── Shake/                         # ★ Main feature
 │       │   │   ├── ShakeView.swift            # Idle / Loading / Result / Error states
-│       │   │   ├── ShakeViewModel.swift       # State machine, shake listener
+│       │   │   ├── ShakeViewModel.swift       # State machine, real API calls, exclude list
 │       │   │   └── RestaurantRevealView.swift # Result card: photo, directions, share, ♥
 │       │   ├── Filters/
 │       │   │   └── FilterView.swift           # Radius / cuisine / price pickers
@@ -266,6 +266,8 @@ curl "http://localhost:8080/api/v1/shake?lat=37.7749&lng=-122.4194"
 | Backend — Docker + Makefile | ✅ Done | `make run` · `make docker-up` |
 | Backend — Tested + verified | ✅ Done | All endpoints smoke tested, edge cases probed |
 | Backend — 405 + clean error messages | ✅ Done | Proper method-not-allowed, friendly validation errors |
+| iOS ↔ Backend — End-to-end wiring | ✅ Done | Shake → Go → JSON → card, exclude list, error states |
+| iOS ↔ Backend — Offline error handling | ✅ Done | "Could not connect" when server is down |
 | Backend — Auth (JWT + Sign in with Apple) | 🔜 Next | |
 | Backend — Favorites + History endpoints | 🔜 Next | |
-| iOS ↔ Backend — End-to-end wiring | 🔜 Next | Build Swift APIClient |
+| Deploy backend to Railway / Fly.io | 🔜 Next | |
