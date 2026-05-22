@@ -117,24 +117,39 @@ ShakeMeal/
 │       └── Resources/
 │           └── Localizable.strings            # i18n strings
 │
-└── backend/                                   # Go API server (not yet scaffolded)
-    ├── cmd/server/main.go
+└── backend/                                   # Go API server
+    ├── cmd/server/
+    │   └── main.go                            # Entry point, wires all dependencies
     ├── internal/
     │   ├── config/
-    │   ├── domain/                            # restaurant, user, history, favorite, preference
+    │   │   └── config.go                      # Env vars via Viper
+    │   ├── domain/
+    │   │   ├── restaurant.go                  # Restaurant model + ShakeRequest
+    │   │   └── user.go                        # User + UserPreference models
     │   ├── api/
-    │   │   ├── middleware/                    # auth, ratelimit, logger
-    │   │   └── handlers/                      # restaurants, favorites, history, preferences, webhook
-    │   ├── service/                           # shake_service, user_service, notification_service
-    │   ├── repository/postgres/               # user, favorites, history, preferences, places_cache
-    │   ├── providers/                         # google.go, foursquare.go (interface-driven)
-    │   ├── jobs/                              # history_cleanup, scheduler
-    │   └── utils/                             # jwt, apperrors, pagination
-    ├── migrations/                            # *.up.sql / *.down.sql
+    │   │   ├── router.go                      # Gin router + middleware wiring
+    │   │   ├── middleware/
+    │   │   │   └── logger.go                  # Structured request logging (zap)
+    │   │   └── handlers/
+    │   │       ├── health.go                  # GET /health
+    │   │       └── restaurants.go             # GET /api/v1/shake
+    │   ├── service/
+    │   │   └── shake_service.go               # Fetch + filter + randomise logic
+    │   ├── providers/
+    │   │   ├── interface.go                   # PlacesProvider interface
+    │   │   ├── google.go                      # Google Places API implementation
+    │   │   └── mock.go                        # Mock provider (no API key needed)
+    │   └── utils/apperrors/
+    │       └── errors.go                      # Typed app errors
+    ├── migrations/
+    │   ├── 000001_create_users.up/down.sql
+    │   ├── 000002_create_user_preferences.up/down.sql
+    │   ├── 000003_create_favorites.up/down.sql
+    │   ├── 000004_create_shake_history.up/down.sql
+    │   └── 000005_create_places_cache.up/down.sql
     ├── docker/
-    │   ├── Dockerfile
+    │   ├── Dockerfile                         # Multi-stage build
     │   └── docker-compose.yml                 # Local: Go + Postgres
-    ├── docs/openapi.yaml
     ├── .env.example
     ├── go.mod
     └── Makefile                               # make run · make migrate · make test
@@ -206,14 +221,23 @@ open ShakeMeal.xcodeproj
 > Shake the simulator via **Device → Shake**, keyboard shortcut `Cmd+Ctrl+Z`, or tap **Shake Now**.
 > Before submitting to the App Store, add your Apple Team ID to `ios/project.yml`.
 
-### Backend *(coming soon)*
+### Backend
 
 ```bash
 cd backend
-cp .env.example .env
-docker-compose -f docker/docker-compose.yml up
-make migrate
-make run
+cp .env.example .env          # set GOOGLE_PLACES_API_KEY (optional — mock is used if missing)
+
+# Run with local Postgres
+make docker-db                # starts Postgres only
+make migrate                  # run SQL migrations (requires: brew install golang-migrate)
+make run                      # starts API at localhost:8080
+
+# Or run everything in Docker
+make docker-up
+
+# Smoke test
+curl http://localhost:8080/health
+curl "http://localhost:8080/api/v1/shake?lat=37.7749&lng=-122.4194"
 ```
 
 ---
@@ -230,6 +254,11 @@ make run
 | iOS — Tested on simulator | ✅ Done | iPhone 16, iOS 17 — all screens verified |
 | iOS — Real API integration | 🔜 Pending | Swap mock in `ShakeViewModel` |
 | iOS — StoreKit 2 Paywall | 🔜 Pending | |
-| Backend — Go scaffold | 🔜 Next | |
-| Backend — PostgreSQL migrations | 🔜 Next | |
-| Backend — Google Places integration | 🔜 Next | |
+| Backend — Go scaffold | ✅ Done | Gin + Viper + Zap, runs on :8080 |
+| Backend — `/health` + `/api/v1/shake` | ✅ Done | Mock provider (no API key needed) |
+| Backend — Google Places integration | ✅ Done | Swaps in automatically when key is set |
+| Backend — PostgreSQL migrations | ✅ Done | 5 tables: users, prefs, favs, history, cache |
+| Backend — Docker + Makefile | ✅ Done | `make run` · `make docker-up` |
+| Backend — Auth (JWT + Sign in with Apple) | 🔜 Next | |
+| Backend — Favorites + History endpoints | 🔜 Next | |
+| iOS ↔ Backend — End-to-end wiring | 🔜 Next | Build Swift APIClient |
