@@ -9,9 +9,12 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/myron0220/shakemeal/internal/domain"
 	"github.com/myron0220/shakemeal/internal/repository"
 	"github.com/myron0220/shakemeal/internal/utils/apperrors"
@@ -67,6 +70,88 @@ func (s *AuthService) SignInWithApple(ctx context.Context, identityToken, fullNa
 		if err := s.users.Create(ctx, user); err != nil {
 			return nil, nil, apperrors.Internal(err)
 		}
+	}
+
+	pair, err := s.mintTokenPair(user.ID)
+	if err != nil {
+		return nil, nil, apperrors.Internal(err)
+	}
+	return user, pair, nil
+}
+
+// Register creates a new account with an email or phone number + password.
+// identifier is treated as a phone number when it contains no "@", email otherwise.
+func (s *AuthService) Register(ctx context.Context, identifier, password, name string) (*domain.User, *TokenPair, error) {
+	if len(password) < 8 {
+		return nil, nil, apperrors.BadRequest("password must be at least 8 characters")
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	if err != nil {
+		return nil, nil, apperrors.Internal(err)
+	}
+	hashStr := string(hash)
+
+	user := &domain.User{PasswordHash: &hashStr}
+	if name != "" {
+		user.Name = &name
+	}
+
+	if strings.Contains(identifier, "@") {
+		// email
+		existing, err := s.users.FindByEmail(ctx, identifier)
+		if err != nil {
+			return nil, nil, apperrors.Internal(err)
+		}
+		if existing != nil {
+			return nil, nil, apperrors.BadRequest("an account with that email already exists")
+		}
+		user.Email = &identifier
+	} else {
+		// phone
+		existing, err := s.users.FindByPhone(ctx, identifier)
+		if err != nil {
+			return nil, nil, apperrors.Internal(err)
+		}
+		if existing != nil {
+			return nil, nil, apperrors.BadRequest("an account with that phone number already exists")
+		}
+		user.Phone = &identifier
+	}
+
+	if err := s.users.CreateWithPassword(ctx, user); err != nil {
+		return nil, nil, apperrors.Internal(err)
+	}
+
+	pair, err := s.mintTokenPair(user.ID)
+	if err != nil {
+		return nil, nil, apperrors.Internal(err)
+	}
+	return user, pair, nil
+}
+
+// Login verifies an email/phone + password and returns the user + a fresh token pair.
+func (s *AuthService) Login(ctx context.Context, identifier, password string) (*domain.User, *TokenPair, error) {
+	var (
+		user *domain.User
+		err  error
+	)
+
+	if strings.Contains(identifier, "@") {
+		user, err = s.users.FindByEmail(ctx, identifier)
+	} else {
+		user, err = s.users.FindByPhone(ctx, identifier)
+	}
+	if err != nil {
+		return nil, nil, apperrors.Internal(err)
+	}
+	if user == nil || user.PasswordHash == nil {
+		// Deliberately vague — don't reveal whether the account exists.
+		return nil, nil, apperrors.BadRequest("invalid credentials")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(password)); err != nil {
+		return nil, nil, apperrors.BadRequest("invalid credentials")
 	}
 
 	pair, err := s.mintTokenPair(user.ID)

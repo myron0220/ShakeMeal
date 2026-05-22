@@ -26,34 +26,96 @@ struct ProfileView: View {
 private struct SignedOutView: View {
     @EnvironmentObject var authManager: AuthManager
 
-    var body: some View {
-        VStack(spacing: 32) {
-            Spacer()
+    // Form state
+    @State private var identifier  = ""   // email or phone
+    @State private var password    = ""
+    @State private var name        = ""   // register only
+    @State private var isRegister  = false
+    @State private var errorMessage: String?
 
-            VStack(spacing: 12) {
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 28) {
+                Spacer().frame(height: 12)
+
+                // Avatar
                 Image(systemName: "person.circle")
                     .font(.system(size: 72))
                     .foregroundStyle(AppColors.textSecondary)
 
-                Text("Sign in to sync your favorites and history across all your devices.")
-                    .font(AppFonts.body)
-                    .foregroundStyle(AppColors.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-            }
+                // Tab toggle: Login / Register
+                Picker("", selection: $isRegister) {
+                    Text("Sign In").tag(false)
+                    Text("Register").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 32)
 
-            Spacer()
+                // Form
+                VStack(spacing: 14) {
+                    if isRegister {
+                        TextField("Name (optional)", text: $name)
+                            .textContentType(.name)
+                            .autocorrectionDisabled()
+                            .styledField()
+                    }
 
-            VStack(spacing: 16) {
-                // Native Sign in with Apple button
+                    TextField("Email or phone number", text: $identifier)
+                        .textContentType(isRegister ? .username : .username)
+                        .keyboardType(.emailAddress)
+                        .autocorrectionDisabled()
+                        .autocapitalization(.none)
+                        .styledField()
+
+                    SecureField("Password (min 8 characters)", text: $password)
+                        .textContentType(isRegister ? .newPassword : .password)
+                        .styledField()
+                }
+                .padding(.horizontal, 32)
+
+                // Error
+                if let msg = errorMessage {
+                    Text(msg)
+                        .font(AppFonts.meta)
+                        .foregroundStyle(AppColors.warning)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+
+                // Primary action button
+                Button(action: submit) {
+                    if authManager.isLoading {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text(isRegister ? "Create Account" : "Sign In")
+                            .font(AppFonts.button)
+                            .foregroundStyle(.white)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(identifier.isEmpty || password.isEmpty
+                             ? AppColors.primary.opacity(0.4)
+                             : AppColors.primary,
+                             in: .capsule)
+                .disabled(identifier.isEmpty || password.isEmpty || authManager.isLoading)
+                .padding(.horizontal, 32)
+
+                // Divider
+                HStack {
+                    Rectangle().frame(height: 1).foregroundStyle(AppColors.textSecondary.opacity(0.2))
+                    Text("or").font(AppFonts.meta).foregroundStyle(AppColors.textSecondary)
+                    Rectangle().frame(height: 1).foregroundStyle(AppColors.textSecondary.opacity(0.2))
+                }
+                .padding(.horizontal, 32)
+
+                // Sign in with Apple (real device only)
                 SignInWithAppleButton(.signIn) { request in
                     request.requestedScopes = [.fullName, .email]
                 } onCompletion: { result in
                     switch result {
-                    case .success(let auth):
-                        authManager.handleAuthorization(auth)
-                    case .failure(let error):
-                        print("[ProfileView] Sign in with Apple failed:", error)
+                    case .success(let auth): authManager.handleAuthorization(auth)
+                    case .failure(let err):  print("[ProfileView] Apple sign-in error:", err)
                     }
                 }
                 .signInWithAppleButtonStyle(.black)
@@ -61,12 +123,41 @@ private struct SignedOutView: View {
                 .cornerRadius(26)
                 .padding(.horizontal, 32)
 
-                if authManager.isLoading {
-                    ProgressView()
-                }
+                Spacer().frame(height: 32)
             }
-            .padding(.bottom, 48)
         }
+    }
+
+    private func submit() {
+        errorMessage = nil
+        Task {
+            do {
+                if isRegister {
+                    try await authManager.register(identifier: identifier,
+                                                   password: password,
+                                                   name: name)
+                } else {
+                    try await authManager.login(identifier: identifier,
+                                                password: password)
+                }
+            } catch let apiError as APIError {
+                errorMessage = apiError.localizedDescription
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+}
+
+// MARK: - TextField style helper
+
+private extension View {
+    func styledField() -> some View {
+        self
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(AppColors.card, in: .rect(cornerRadius: 12))
+            .font(AppFonts.body)
     }
 }
 
@@ -92,6 +183,10 @@ private struct SignedInView: View {
 
                 if let email = authManager.user?.email {
                     Text(email)
+                        .font(AppFonts.body)
+                        .foregroundStyle(AppColors.textSecondary)
+                } else if let phone = authManager.user?.phone {
+                    Text(phone)
                         .font(AppFonts.body)
                         .foregroundStyle(AppColors.textSecondary)
                 }

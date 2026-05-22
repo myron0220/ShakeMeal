@@ -25,6 +25,18 @@ type appleSignInRequest struct {
 	FullName      string `json:"full_name"` // only present on the very first sign-in
 }
 
+type registerRequest struct {
+	// Identifier is either an email address or a phone number (+1234567890).
+	Identifier string `json:"identifier" binding:"required"`
+	Password   string `json:"password"   binding:"required"`
+	Name       string `json:"name"`
+}
+
+type loginRequest struct {
+	Identifier string `json:"identifier" binding:"required"`
+	Password   string `json:"password"   binding:"required"`
+}
+
 type refreshRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
@@ -41,6 +53,48 @@ func (h *AuthHandler) AppleSignIn(c *gin.Context) {
 	}
 
 	user, tokens, err := h.auth.SignInWithApple(c.Request.Context(), req.IdentityToken, req.FullName)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user":   user,
+		"tokens": tokens,
+	})
+}
+
+// Register creates a new account with email/phone + password.
+// POST /api/v1/auth/register
+func (h *AuthHandler) Register(c *gin.Context) {
+	var req registerRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": apperrors.FormatValidationError(err)})
+		return
+	}
+
+	user, tokens, err := h.auth.Register(c.Request.Context(), req.Identifier, req.Password, req.Name)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"user":   user,
+		"tokens": tokens,
+	})
+}
+
+// Login authenticates with email/phone + password and returns a token pair.
+// POST /api/v1/auth/login
+func (h *AuthHandler) Login(c *gin.Context) {
+	var req loginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": apperrors.FormatValidationError(err)})
+		return
+	}
+
+	user, tokens, err := h.auth.Login(c.Request.Context(), req.Identifier, req.Password)
 	if err != nil {
 		respondError(c, err)
 		return

@@ -24,11 +24,12 @@ struct AuthResponse: Codable {
 struct UserProfile: Codable, Equatable {
     let id:    String
     let email: String?
+    let phone: String?
     let name:  String?
     let isPro: Bool
 
     enum CodingKeys: String, CodingKey {
-        case id, email, name
+        case id, email, phone, name
         case isPro = "is_pro"
     }
 }
@@ -59,6 +60,31 @@ final class AuthManager: NSObject, ObservableObject {
         self.api = api
         super.init()
         isSignedIn = KeychainHelper.load(forKey: Key.accessToken) != nil
+    }
+
+    // MARK: - Email / Phone + Password
+
+    /// Register a new account. `identifier` is an email address or phone number.
+    func register(identifier: String, password: String, name: String = "") async throws {
+        isLoading = true
+        defer { isLoading = false }
+        var body: [String: String] = ["identifier": identifier, "password": password]
+        if !name.isEmpty { body["name"] = name }
+        let response: AuthResponse = try await api.post("/api/v1/auth/register", body: body)
+        user = response.user
+        persist(response.tokens)
+    }
+
+    /// Sign in with an existing email/phone + password account.
+    func login(identifier: String, password: String) async throws {
+        isLoading = true
+        defer { isLoading = false }
+        let response: AuthResponse = try await api.post(
+            "/api/v1/auth/login",
+            body: ["identifier": identifier, "password": password]
+        )
+        user = response.user
+        persist(response.tokens)
     }
 
     // MARK: - Sign In With Apple

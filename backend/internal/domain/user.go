@@ -7,10 +7,13 @@ type User struct {
 	AppleID   *string    `json:"apple_id,omitempty" db:"apple_id"`
 	DeviceID  *string    `json:"device_id,omitempty" db:"device_id"`
 	Email     *string    `json:"email,omitempty" db:"email"`
+	Phone     *string    `json:"phone,omitempty" db:"phone"`
 	Name      *string    `json:"name,omitempty" db:"name"`
 	IsPro     bool       `json:"is_pro" db:"is_pro"`
 	CreatedAt time.Time  `json:"created_at" db:"created_at"`
 	DeletedAt *time.Time `json:"-" db:"deleted_at"`
+	// PasswordHash is never serialised — kept server-side only.
+	PasswordHash *string `json:"-" db:"password_hash"`
 }
 
 type UserPreference struct {

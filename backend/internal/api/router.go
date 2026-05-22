@@ -39,8 +39,10 @@ func NewRouter(
 		if authHandler != nil {
 			auth := v1.Group("/auth")
 			{
-				auth.POST("/apple", authHandler.AppleSignIn)
-				auth.POST("/refresh", authHandler.Refresh)
+				auth.POST("/register", authHandler.Register)  // email/phone + password
+				auth.POST("/login", authHandler.Login)        // email/phone + password
+				auth.POST("/apple", authHandler.AppleSignIn)  // Sign in with Apple
+				auth.POST("/refresh", authHandler.Refresh)    // refresh JWT pair
 			}
 		}
 

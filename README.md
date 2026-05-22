@@ -166,7 +166,9 @@ ShakeMeal/
 
 ```
 # Auth
-POST   /api/v1/auth/apple          Sign in with Apple
+POST   /api/v1/auth/register       Register with email or phone + password
+POST   /api/v1/auth/login          Sign in with email or phone + password
+POST   /api/v1/auth/apple          Sign in with Apple (real device only)
 POST   /api/v1/auth/refresh        Refresh JWT
 
 # Core
@@ -270,7 +272,9 @@ curl "http://localhost:8080/api/v1/shake?lat=37.7749&lng=-122.4194"
 | Backend — Soft exclude / infinite shake | ✅ Done | Falls back to full pool when exclude list exhausts all options — user never hits a dead end |
 | iOS ↔ Backend — End-to-end wiring | ✅ Done | Shake → Go → JSON → card, exclude list, error states |
 | iOS ↔ Backend — Offline error handling | ✅ Done | "Could not connect" when server is down |
-| Backend — Auth (JWT + Sign in with Apple) | ✅ Done | `POST /api/v1/auth/apple` + `/auth/refresh`; Apple JWKS verification; JWT middleware; DB-optional (disabled gracefully when `DATABASE_URL` unset) |
-| iOS — Sign in with Apple + Keychain | 🔜 TODO | Code complete (`AuthManager`, `KeychainHelper`, `ProfileView`); needs real-device test with Apple ID — simulator login not possible |
+| Backend — Auth (JWT + Sign in with Apple) | ✅ Done | `POST /api/v1/auth/apple` + `/auth/refresh`; Apple JWKS verification; JWT middleware; DB-optional |
+| Backend — Auth (Email / Phone + Password) | ✅ Done | `POST /api/v1/auth/register` + `/auth/login`; bcrypt (cost 12); identifier auto-detected as email or phone |
+| iOS — Sign in with Apple + Keychain | 🔜 TODO | Code complete; needs real-device test with Apple ID — simulator login not possible |
+| iOS — Email / Phone + Password auth | ✅ Done | `ProfileView` form with Register/Sign In toggle; wired to `AuthManager`; works on simulator |
 | Backend — Favorites + History endpoints | 🔜 Next | |
 | Deploy backend to Railway / Fly.io | 🔜 Next | |
