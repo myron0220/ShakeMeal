@@ -22,7 +22,7 @@ func NewRestaurantHandler(shakeSvc *service.ShakeService) *RestaurantHandler {
 func (h *RestaurantHandler) Shake(c *gin.Context) {
 	var req domain.ShakeRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": apperrors.FormatValidationError(err)})
 		return
 	}
 
