@@ -258,7 +258,7 @@ curl "http://localhost:8080/api/v1/shake?lat=37.7749&lng=-122.4194"
 | iOS — Theme (Colors, Typography) | ✅ Done | System-adaptive colors (`UIColor`) |
 | iOS — Tested on simulator | ✅ Done | iPhone 16, iOS 17 — all screens verified |
 | iOS — Real API integration | ✅ Done | `APIClient` wired, end-to-end verified on simulator |
-| iOS — Dice rolling animation + smooth transitions | ✅ Done | ⚀–⚅ cycling with spring rotation/bounce; spring transitions between all states; no layout jump |
+| iOS — Dice rolling animation + smooth transitions | ✅ Done | SF Symbols `die.face.1–6` cycling with spring rotation/bounce; spring transitions between all states; no layout jump or blank frames |
 | iOS — StoreKit 2 Paywall | 🔜 Pending | |
 | Backend — Go scaffold | ✅ Done | Gin + Viper + Zap, runs on :8080 |
 | Backend — `/health` + `/api/v1/shake` | ✅ Done | Mock provider (no API key needed) |
@@ -271,6 +271,6 @@ curl "http://localhost:8080/api/v1/shake?lat=37.7749&lng=-122.4194"
 | iOS ↔ Backend — End-to-end wiring | ✅ Done | Shake → Go → JSON → card, exclude list, error states |
 | iOS ↔ Backend — Offline error handling | ✅ Done | "Could not connect" when server is down |
 | Backend — Auth (JWT + Sign in with Apple) | ✅ Done | `POST /api/v1/auth/apple` + `/auth/refresh`; Apple JWKS verification; JWT middleware; DB-optional (disabled gracefully when `DATABASE_URL` unset) |
-| iOS — Sign in with Apple + Keychain | ✅ Done | `AuthManager`, `KeychainHelper`, `ProfileView`; access + refresh tokens stored securely; auto-attached to every API request |
+| iOS — Sign in with Apple + Keychain | 🔜 TODO | Code complete (`AuthManager`, `KeychainHelper`, `ProfileView`); needs real-device test with Apple ID — simulator login not possible |
 | Backend — Favorites + History endpoints | 🔜 Next | |
 | Deploy backend to Railway / Fly.io | 🔜 Next | |
