@@ -105,27 +105,21 @@ private struct IdleShakeView: View {
 // MARK: - Loading State  (dice rolling animation)
 private struct ShakeLoadingView: View {
     private let faces = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"]
-    @State private var faceIndex = 0
-    @State private var rotation: Double = 0
-    @State private var bounceScale: CGFloat = 1.0
-
-    private let timer = Timer.publish(every: 0.12, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(spacing: 32) {
             Spacer()
 
-            Text(faces[faceIndex])
-                .font(.system(size: 80))
-                .rotationEffect(.degrees(rotation))
-                .scaleEffect(bounceScale)
-                .onReceive(timer) { _ in
-                    withAnimation(.interpolatingSpring(stiffness: 280, damping: 14)) {
-                        faceIndex = (faceIndex + 1) % faces.count
-                        rotation += 60
-                        bounceScale = bounceScale == 1.0 ? 1.18 : 1.0
-                    }
-                }
+            // PhaseAnimator is driven by SwiftUI's own scheduler — never drops
+            // frames the way a Timer.publish on a value-type View can.
+            PhaseAnimator(Array(faces.indices)) { phase in
+                Text(faces[phase])
+                    .font(.system(size: 80))
+                    .rotationEffect(.degrees(Double(phase) * 60))
+                    .scaleEffect(phase % 2 == 0 ? 1.0 : 1.18)
+            } animation: { _ in
+                .spring(response: 0.15, dampingFraction: 0.55)
+            }
 
             VStack(spacing: 8) {
                 Text("Rolling the dice...")
@@ -140,9 +134,9 @@ private struct ShakeLoadingView: View {
 
             Spacer()
 
-            // Invisible spacer matching the Shake Now button so layout height stays constant
+            // Invisible placeholder keeps the layout height identical to IdleShakeView
             Color.clear
-                .frame(height: 56 + 40) // button height + bottom padding
+                .frame(height: 56 + 40)
                 .padding(.horizontal, 32)
         }
     }
