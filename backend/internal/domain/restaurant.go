@@ -8,7 +8,7 @@ type Restaurant struct {
 	Cuisine        string   `json:"cuisine"`
 	Rating         float64  `json:"rating"`
 	PriceLevel     int      `json:"price_level"`    // 1-4
-	PhotoURL       string   `json:"photo_url"`      // resolved Google photo URL
+	PhotoURL       string   `json:"photo_url,omitempty"` // omitted when empty so clients decode as nil
 	Latitude       float64  `json:"latitude"`
 	Longitude      float64  `json:"longitude"`
 	DistanceMeters float64  `json:"distance_meters"`

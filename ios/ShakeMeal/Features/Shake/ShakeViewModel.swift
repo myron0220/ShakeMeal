@@ -6,8 +6,8 @@ import CoreLocation
 final class ShakeViewModel: ObservableObject {
     // MARK: - State
     enum State {
-        case idle           // waiting for shake
-        case loading        // fetching restaurant
+        case idle
+        case loading
         case result(Restaurant)
         case error(String)
     }
@@ -18,9 +18,15 @@ final class ShakeViewModel: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     private let locationManager: LocationManager
+    private let api: APIClient
 
-    init(locationManager: LocationManager) {
+    // Track recently seen place IDs to avoid immediate repeats
+    private var recentlyExcluded: [String] = []
+    private let maxExcluded = 10
+
+    init(locationManager: LocationManager, api: APIClient = .shared) {
         self.locationManager = locationManager
+        self.api = api
         listenForShake()
     }
 
@@ -38,10 +44,26 @@ final class ShakeViewModel: ObservableObject {
             locationManager.requestPermission()
             return
         }
+        guard locationManager.currentLocation != nil else {
+            locationManager.requestLocation()
+            state = .loading
+            // Retry once location arrives
+            locationManager.$currentLocation
+                .compactMap { $0 }
+                .first()
+                .receive(on: RunLoop.main)
+                .sink { [weak self] _ in self?.fetchRandomRestaurant() }
+                .store(in: &cancellables)
+            return
+        }
         fetchRandomRestaurant()
     }
 
     func shakeAgain() {
+        // Exclude the current result so we always get something different
+        if case .result(let current) = state {
+            addToExcluded(current.id)
+        }
         fetchRandomRestaurant()
     }
 
@@ -51,14 +73,32 @@ final class ShakeViewModel: ObservableObject {
 
     // MARK: - Fetch
     private func fetchRandomRestaurant() {
+        guard let location = locationManager.currentLocation else { return }
         state = .loading
 
-        // TODO: Replace with real API call
-        // Simulating network delay with mock data
         Task {
-            try? await Task.sleep(nanoseconds: 1_200_000_000) // 1.2s
-            let result = Restaurant.mockList.randomElement() ?? .mock
-            self.state = .result(result)
+            do {
+                let restaurant = try await api.shake(
+                    lat: location.coordinate.latitude,
+                    lng: location.coordinate.longitude,
+                    filter: filter,
+                    exclude: recentlyExcluded
+                )
+                state = .result(restaurant)
+            } catch APIError.noRestaurantsFound {
+                state = .error("No restaurants found nearby.\nTry increasing your search radius.")
+            } catch APIError.networkUnavailable {
+                state = .error("No internet connection.\nPlease check your network and try again.")
+            } catch {
+                state = .error(error.localizedDescription)
+            }
+        }
+    }
+
+    private func addToExcluded(_ id: String) {
+        recentlyExcluded.append(id)
+        if recentlyExcluded.count > maxExcluded {
+            recentlyExcluded.removeFirst()
         }
     }
 }

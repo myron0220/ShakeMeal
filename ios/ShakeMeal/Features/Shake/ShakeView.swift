@@ -1,8 +1,7 @@
 import SwiftUI
 
 struct ShakeView: View {
-    @EnvironmentObject var locationManager: LocationManager
-    @StateObject private var viewModel = ShakeViewModel(locationManager: LocationManager())
+    @EnvironmentObject var viewModel: ShakeViewModel
 
     var body: some View {
         NavigationStack {
@@ -32,9 +31,7 @@ struct ShakeView: View {
                     Button {
                         viewModel.isFilterPresented = true
                     } label: {
-                        Image(systemName: viewModel.filter.isDefault
-                              ? "slider.horizontal.3"
-                              : "slider.horizontal.3")
+                        Image(systemName: "slider.horizontal.3")
                             .symbolRenderingMode(.hierarchical)
                             .foregroundStyle(viewModel.filter.isDefault
                                              ? AppColors.textSecondary
@@ -138,5 +135,5 @@ private struct ErrorView: View {
 
 #Preview {
     ShakeView()
-        .environmentObject(LocationManager())
+        .environmentObject(ShakeViewModel(locationManager: LocationManager()))
 }

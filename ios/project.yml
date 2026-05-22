@@ -27,6 +27,8 @@ targets:
         NSLocationWhenInUseUsageDescription: "ShakeMeal needs your location to find nearby restaurants."
         NSMotionUsageDescription: "ShakeMeal uses motion to detect when you shake your device."
         UIApplicationSupportsIndirectInputEvents: true
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true   # allows http://localhost in DEBUG builds
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.shakemeal.app

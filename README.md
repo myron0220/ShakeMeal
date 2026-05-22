@@ -86,13 +86,17 @@ ShakeMeal/
 │       │   └── ContentView.swift              # Root TabView (Shake / History / Favorites)
 │       │
 │       ├── Core/
+│       │   ├── Config/
+│       │   │   └── AppConfig.swift            # Base URL (localhost in DEBUG, prod in RELEASE)
 │       │   ├── Location/
 │       │   │   └── LocationManager.swift      # CLLocation wrapper, permission handling
 │       │   ├── Motion/
 │       │   │   └── ShakeDetector.swift        # UIWindow shake → Combine publisher
 │       │   └── Network/
+│       │       ├── APIClient.swift            # async/await URLSession wrapper
+│       │       ├── APIError.swift             # Typed network errors
 │       │       └── Models/
-│       │           ├── Restaurant.swift       # Restaurant model + mock data
+│       │           ├── Restaurant.swift       # Restaurant model + CodingKeys + mock data
 │       │           └── ShakeFilter.swift      # Filter model (radius, cuisine, price)
 │       │
 │       ├── Features/
@@ -253,7 +257,7 @@ curl "http://localhost:8080/api/v1/shake?lat=37.7749&lng=-122.4194"
 | iOS — Filters, History, Favorites | ✅ Done | Mock data; real data pending backend |
 | iOS — Theme (Colors, Typography) | ✅ Done | System-adaptive colors (`UIColor`) |
 | iOS — Tested on simulator | ✅ Done | iPhone 16, iOS 17 — all screens verified |
-| iOS — Real API integration | 🔜 Pending | Swap mock in `ShakeViewModel` |
+| iOS — Real API integration | ✅ Done | `APIClient` wired, end-to-end verified on simulator |
 | iOS — StoreKit 2 Paywall | 🔜 Pending | |
 | Backend — Go scaffold | ✅ Done | Gin + Viper + Zap, runs on :8080 |
 | Backend — `/health` + `/api/v1/shake` | ✅ Done | Mock provider (no API key needed) |
