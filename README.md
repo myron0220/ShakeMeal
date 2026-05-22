@@ -140,7 +140,8 @@ ShakeMeal/
     │   │   ├── google.go                      # Google Places API implementation
     │   │   └── mock.go                        # Mock provider (no API key needed)
     │   └── utils/apperrors/
-    │       └── errors.go                      # Typed app errors
+    │       ├── errors.go                      # Typed app errors
+    │       └── validation.go                  # Friendly validation error formatter
     ├── migrations/
     │   ├── 000001_create_users.up/down.sql
     │   ├── 000002_create_user_preferences.up/down.sql
@@ -259,6 +260,8 @@ curl "http://localhost:8080/api/v1/shake?lat=37.7749&lng=-122.4194"
 | Backend — Google Places integration | ✅ Done | Swaps in automatically when key is set |
 | Backend — PostgreSQL migrations | ✅ Done | 5 tables: users, prefs, favs, history, cache |
 | Backend — Docker + Makefile | ✅ Done | `make run` · `make docker-up` |
+| Backend — Tested + verified | ✅ Done | All endpoints smoke tested, edge cases probed |
+| Backend — 405 + clean error messages | ✅ Done | Proper method-not-allowed, friendly validation errors |
 | Backend — Auth (JWT + Sign in with Apple) | 🔜 Next | |
 | Backend — Favorites + History endpoints | 🔜 Next | |
 | iOS ↔ Backend — End-to-end wiring | 🔜 Next | Build Swift APIClient |
