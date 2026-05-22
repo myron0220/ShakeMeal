@@ -73,9 +73,16 @@ final class ShakeViewModel: ObservableObject {
     }
 
     // MARK: - Fetch
+
+    /// Minimum time (seconds) the loading/dice animation is shown.
+    /// Ensures the animation plays even when the API responds instantly (e.g. mock).
+    /// Has zero effect when the real API takes longer than this.
+    private let minLoadingDisplay: TimeInterval = 0.85
+
     private func fetchRandomRestaurant() {
         guard let location = locationManager.currentLocation else { return }
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { state = .loading }
+        let loadStart = Date()
 
         Task {
             do {
@@ -85,6 +92,11 @@ final class ShakeViewModel: ObservableObject {
                     filter: filter,
                     exclude: recentlyExcluded
                 )
+                // Keep the dice rolling for at least minLoadingDisplay seconds.
+                let remaining = minLoadingDisplay - Date().timeIntervalSince(loadStart)
+                if remaining > 0 {
+                    try await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+                }
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
                     state = .result(restaurant)
                 }

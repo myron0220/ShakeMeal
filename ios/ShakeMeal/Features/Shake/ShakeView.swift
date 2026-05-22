@@ -105,20 +105,29 @@ private struct IdleShakeView: View {
 // MARK: - Loading State  (dice rolling animation)
 private struct ShakeLoadingView: View {
     private let faces = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"]
+    private let phaseDuration = 0.15  // seconds per face
 
     var body: some View {
         VStack(spacing: 32) {
             Spacer()
 
-            // PhaseAnimator is driven by SwiftUI's own scheduler — never drops
-            // frames the way a Timer.publish on a value-type View can.
-            PhaseAnimator(Array(faces.indices)) { phase in
-                Text(faces[phase])
+            // TimelineView is purely time-driven: always renders, no
+            // initialization gap, no opacity fade between faces.
+            TimelineView(.animation(minimumInterval: phaseDuration)) { context in
+                let t      = context.date.timeIntervalSinceReferenceDate
+                let total  = phaseDuration * Double(faces.count)   // 0.9 s / cycle
+                let pos    = (t / phaseDuration).truncatingRemainder(dividingBy: Double(faces.count))
+                let idx    = Int(pos) % faces.count
+                let frac   = pos - Double(Int(pos))                // 0…1 within this phase
+                let deg    = Double(idx) * 60 + frac * 60          // smooth rotation
+                // scale bounces 1.0 → 1.18 → 1.0 once per phase (sine curve)
+                let scale  = 1.0 + 0.18 * sin(frac * .pi)
+                let _      = total   // suppress unused-variable warning
+
+                Text(faces[idx])
                     .font(.system(size: 80))
-                    .rotationEffect(.degrees(Double(phase) * 60))
-                    .scaleEffect(phase % 2 == 0 ? 1.0 : 1.18)
-            } animation: { _ in
-                .spring(response: 0.15, dampingFraction: 0.55)
+                    .rotationEffect(.degrees(deg))
+                    .scaleEffect(scale)
             }
 
             VStack(spacing: 8) {
@@ -134,7 +143,7 @@ private struct ShakeLoadingView: View {
 
             Spacer()
 
-            // Invisible placeholder keeps the layout height identical to IdleShakeView
+            // Invisible placeholder keeps layout height identical to IdleShakeView
             Color.clear
                 .frame(height: 56 + 40)
                 .padding(.horizontal, 32)
