@@ -1,11 +1,12 @@
 import Foundation
 import Combine
 import CoreLocation
+import SwiftUI
 
 @MainActor
 final class ShakeViewModel: ObservableObject {
     // MARK: - State
-    enum State {
+    enum State: Equatable {
         case idle
         case loading
         case result(Restaurant)
@@ -46,7 +47,7 @@ final class ShakeViewModel: ObservableObject {
         }
         guard locationManager.currentLocation != nil else {
             locationManager.requestLocation()
-            state = .loading
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { state = .loading }
             // Retry once location arrives
             locationManager.$currentLocation
                 .compactMap { $0 }
@@ -68,13 +69,13 @@ final class ShakeViewModel: ObservableObject {
     }
 
     func dismiss() {
-        state = .idle
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { state = .idle }
     }
 
     // MARK: - Fetch
     private func fetchRandomRestaurant() {
         guard let location = locationManager.currentLocation else { return }
-        state = .loading
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { state = .loading }
 
         Task {
             do {
@@ -84,13 +85,15 @@ final class ShakeViewModel: ObservableObject {
                     filter: filter,
                     exclude: recentlyExcluded
                 )
-                state = .result(restaurant)
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+                    state = .result(restaurant)
+                }
             } catch APIError.noRestaurantsFound {
-                state = .error("No restaurants found nearby.\nTry increasing your search radius.")
+                withAnimation { state = .error("No restaurants found nearby.\nTry increasing your search radius.") }
             } catch APIError.networkUnavailable {
-                state = .error("No internet connection.\nPlease check your network and try again.")
+                withAnimation { state = .error("No internet connection.\nPlease check your network and try again.") }
             } catch {
-                state = .error(error.localizedDescription)
+                withAnimation { state = .error(error.localizedDescription) }
             }
         }
     }
