@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct ShakeView: View {
     @EnvironmentObject var viewModel: ShakeViewModel
@@ -102,33 +103,55 @@ private struct IdleShakeView: View {
     }
 }
 
-// MARK: - Loading State  (dice rolling animation)
+// MARK: - Dice animation model
+// Owned by @StateObject so it lives for exactly the lifetime of ShakeLoadingView —
+// never recreated on re-renders, timer never drops.
+@MainActor
+private final class DiceRollModel: ObservableObject {
+    let faces = ["die.face.1", "die.face.2", "die.face.3",
+                 "die.face.4", "die.face.5", "die.face.6"]
+    @Published private(set) var faceIndex: Int   = 0
+    @Published private(set) var rotation: Double = 0
+    @Published private(set) var scale: CGFloat   = 1.0
+
+    private var cancellable: AnyCancellable?
+
+    func start() {
+        cancellable = Timer.publish(every: 0.15, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                guard let self else { return }
+                withAnimation(.interpolatingSpring(stiffness: 280, damping: 14)) {
+                    self.faceIndex = (self.faceIndex + 1) % self.faces.count
+                    self.rotation += 60
+                    self.scale = self.scale == 1.0 ? 1.18 : 1.0
+                }
+            }
+    }
+
+    func stop() {
+        cancellable?.cancel()
+        cancellable = nil
+    }
+}
+
+// MARK: - Loading State
 private struct ShakeLoadingView: View {
-    private let faces = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"]
-    private let phaseDuration = 0.15  // seconds per face
+    @StateObject private var model = DiceRollModel()
 
     var body: some View {
         VStack(spacing: 32) {
             Spacer()
 
-            // TimelineView is purely time-driven: always renders, no
-            // initialization gap, no opacity fade between faces.
-            TimelineView(.animation(minimumInterval: phaseDuration)) { context in
-                let t      = context.date.timeIntervalSinceReferenceDate
-                let total  = phaseDuration * Double(faces.count)   // 0.9 s / cycle
-                let pos    = (t / phaseDuration).truncatingRemainder(dividingBy: Double(faces.count))
-                let idx    = Int(pos) % faces.count
-                let frac   = pos - Double(Int(pos))                // 0…1 within this phase
-                let deg    = Double(idx) * 60 + frac * 60          // smooth rotation
-                // scale bounces 1.0 → 1.18 → 1.0 once per phase (sine curve)
-                let scale  = 1.0 + 0.18 * sin(frac * .pi)
-                let _      = total   // suppress unused-variable warning
-
-                Text(faces[idx])
-                    .font(.system(size: 80))
-                    .rotationEffect(.degrees(deg))
-                    .scaleEffect(scale)
-            }
+            Image(systemName: model.faces[model.faceIndex])
+                .font(.system(size: 80))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(AppColors.primary)
+                .rotationEffect(.degrees(model.rotation))
+                .scaleEffect(model.scale)
+                .contentTransition(.identity)   // prevents SwiftUI cross-fade on symbol change
+                .onAppear  { model.start() }
+                .onDisappear { model.stop() }
 
             VStack(spacing: 8) {
                 Text("Rolling the dice...")
