@@ -17,12 +17,14 @@ func NewShakeService(places providers.PlacesProvider) *ShakeService {
 	return &ShakeService{places: places}
 }
 
-// RandomRestaurant fetches nearby restaurants and returns one at random,
-// excluding any place_ids the caller has already seen.
+// RandomRestaurant fetches nearby restaurants and returns one at random.
+// The exclude list is treated as a soft preference — if excluding already-seen
+// restaurants would empty the pool, we reset and pick from the full list so
+// the user never hits a dead end.
 func (s *ShakeService) RandomRestaurant(ctx context.Context, req *domain.ShakeRequest) (*domain.Restaurant, error) {
 	req.SetDefaults()
 
-	nearby, err := s.places.NearbyRestaurants(ctx, providers.NearbyRequest{
+	all, err := s.places.NearbyRestaurants(ctx, providers.NearbyRequest{
 		Lat:         req.Lat,
 		Lng:         req.Lng,
 		RadiusM:     req.RadiusM,
@@ -33,26 +35,30 @@ func (s *ShakeService) RandomRestaurant(ctx context.Context, req *domain.ShakeRe
 		return nil, apperrors.Internal(err)
 	}
 
-	// Filter out excluded place IDs
+	if len(all) == 0 {
+		return nil, apperrors.NotFound(apperrors.ErrNoRestaurantsFound.Error())
+	}
+
+	// Try to pick from unseen restaurants first.
+	candidates := all
 	if len(req.Exclude) > 0 {
 		excludeSet := make(map[string]bool, len(req.Exclude))
 		for _, id := range req.Exclude {
 			excludeSet[id] = true
 		}
-		filtered := nearby[:0]
-		for _, r := range nearby {
+		filtered := make([]domain.Restaurant, 0, len(all))
+		for _, r := range all {
 			if !excludeSet[r.ID] {
 				filtered = append(filtered, r)
 			}
 		}
-		nearby = filtered
+		// Only apply the filter if it leaves at least one option.
+		// Otherwise fall back to the full list so the user never gets stuck.
+		if len(filtered) > 0 {
+			candidates = filtered
+		}
 	}
 
-	if len(nearby) == 0 {
-		return nil, apperrors.NotFound(apperrors.ErrNoRestaurantsFound.Error())
-	}
-
-	// Pick one at random
-	picked := nearby[rand.Intn(len(nearby))]
+	picked := candidates[rand.Intn(len(candidates))]
 	return &picked, nil
 }

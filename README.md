@@ -266,6 +266,7 @@ curl "http://localhost:8080/api/v1/shake?lat=37.7749&lng=-122.4194"
 | Backend — Docker + Makefile | ✅ Done | `make run` · `make docker-up` |
 | Backend — Tested + verified | ✅ Done | All endpoints smoke tested, edge cases probed |
 | Backend — 405 + clean error messages | ✅ Done | Proper method-not-allowed, friendly validation errors |
+| Backend — Soft exclude / infinite shake | ✅ Done | Falls back to full pool when exclude list exhausts all options — user never hits a dead end |
 | iOS ↔ Backend — End-to-end wiring | ✅ Done | Shake → Go → JSON → card, exclude list, error states |
 | iOS ↔ Backend — Offline error handling | ✅ Done | "Could not connect" when server is down |
 | Backend — Auth (JWT + Sign in with Apple) | 🔜 Next | |
