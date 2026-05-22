@@ -29,7 +29,13 @@ targets:
         UIApplicationSupportsIndirectInputEvents: true
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true   # allows http://localhost in DEBUG builds
+    entitlements:
+      path: ShakeMeal/ShakeMeal.entitlements
+      properties:
+        com.apple.developer.applesignin:
+          - Default
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.shakemeal.app
         INFOPLIST_FILE: ShakeMeal/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ShakeMeal/ShakeMeal.entitlements

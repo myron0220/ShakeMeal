@@ -15,13 +15,35 @@ final class APIClient {
         // convertFromSnakeCase conflicts with explicit CodingKeys (transforms keys before matching).
     }
 
-    // MARK: - Generic request
+    // MARK: - GET
 
     func get<T: Decodable>(_ path: String, query: [String: String] = [:]) async throws -> T {
         let url = try buildURL(path: path, query: query)
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.timeoutInterval = 15
+        attachAuthHeader(&request)
+
+        let (data, response) = try await perform(request)
+        try validate(response: response, data: data)
+
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            throw APIError.decodingFailed
+        }
+    }
+
+    // MARK: - POST
+
+    func post<T: Decodable>(_ path: String, body: [String: String]) async throws -> T {
+        let url = try buildURL(path: path, query: [:])
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 15
+        request.httpBody = try JSONEncoder().encode(body)
+        attachAuthHeader(&request)
 
         let (data, response) = try await perform(request)
         try validate(response: response, data: data)
@@ -36,28 +58,18 @@ final class APIClient {
     // MARK: - Shake endpoint
 
     func shake(lat: Double, lng: Double, filter: ShakeFilter, exclude: [String] = []) async throws -> Restaurant {
-        var query: [String: String] = [
-            "lat": String(lat),
-            "lng": String(lng),
-            "radius": String(filter.radiusMeters),
-        ]
+        var components = URLComponents(
+            url: baseURL.appendingPathComponent("/api/v1/shake"),
+            resolvingAgainstBaseURL: false
+        )!
 
-        // Multi-value params: build URL manually for arrays
-        var components = URLComponents(url: baseURL.appendingPathComponent("/api/v1/shake"), resolvingAgainstBaseURL: false)!
         var items = [URLQueryItem]()
         items.append(URLQueryItem(name: "lat",    value: String(lat)))
         items.append(URLQueryItem(name: "lng",    value: String(lng)))
         items.append(URLQueryItem(name: "radius", value: String(filter.radiusMeters)))
-
-        for cuisine in filter.cuisines {
-            items.append(URLQueryItem(name: "cuisine", value: cuisine))
-        }
-        for price in filter.priceLevels {
-            items.append(URLQueryItem(name: "price", value: String(price)))
-        }
-        for id in exclude {
-            items.append(URLQueryItem(name: "exclude", value: id))
-        }
+        for cuisine in filter.cuisines  { items.append(URLQueryItem(name: "cuisine", value: cuisine)) }
+        for price   in filter.priceLevels { items.append(URLQueryItem(name: "price", value: String(price))) }
+        for id      in exclude          { items.append(URLQueryItem(name: "exclude", value: id)) }
         components.queryItems = items
 
         guard let url = components.url else { throw APIError.unknown(URLError(.badURL)) }
@@ -65,6 +77,7 @@ final class APIClient {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.timeoutInterval = 15
+        attachAuthHeader(&request)
 
         let (data, response) = try await perform(request)
         try validate(response: response, data: data)
@@ -78,9 +91,17 @@ final class APIClient {
 
     // MARK: - Helpers
 
+    private func attachAuthHeader(_ request: inout URLRequest) {
+        if let token = KeychainHelper.load(forKey: "access_token") {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+    }
+
     private func buildURL(path: String, query: [String: String]) throws -> URL {
-        var components = URLComponents(url: baseURL.appendingPathComponent(path),
-                                       resolvingAgainstBaseURL: false)!
+        var components = URLComponents(
+            url: baseURL.appendingPathComponent(path),
+            resolvingAgainstBaseURL: false
+        )!
         if !query.isEmpty {
             components.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
         }
@@ -101,9 +122,11 @@ final class APIClient {
     private func validate(response: URLResponse, data: Data) throws {
         guard let http = response as? HTTPURLResponse else { return }
         switch http.statusCode {
-        case 200...299: return
+        case 200...299:
+            return
+        case 401:
+            throw APIError.unauthorized
         case 404:
-            // Try to extract message from body
             if let body = try? JSONDecoder().decode(APIErrorBody.self, from: data),
                body.message.contains("no restaurants") {
                 throw APIError.noRestaurantsFound

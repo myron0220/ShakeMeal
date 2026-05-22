@@ -12,30 +12,49 @@ import (
 func NewRouter(
 	log *zap.Logger,
 	restaurantHandler *handlers.RestaurantHandler,
+	authHandler *handlers.AuthHandler, // nil when DB is not configured
+	jwtSecret string,
 ) *gin.Engine {
 	r := gin.New()
 	r.Use(middleware.Logger(log))
 	r.Use(gin.Recovery())
 
-	// Return 405 instead of 404 when the route exists but the method is wrong
 	r.HandleMethodNotAllowed = true
 	r.NoMethod(func(c *gin.Context) {
 		c.JSON(http.StatusMethodNotAllowed, gin.H{"message": "method not allowed"})
 	})
-
-	// Return clean JSON for unknown routes
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "not found"})
 	})
 
-	// Health check — no auth required
+	// Health — no auth required
 	r.GET("/health", handlers.Health)
 
-	// API v1
 	v1 := r.Group("/api/v1")
 	{
+		// ── Public ────────────────────────────────────────────────────────────
 		v1.GET("/shake", restaurantHandler.Shake)
-		// TODO: favorites, history, preferences, auth, webhooks
+
+		// ── Auth ──────────────────────────────────────────────────────────────
+		if authHandler != nil {
+			auth := v1.Group("/auth")
+			{
+				auth.POST("/apple", authHandler.AppleSignIn)
+				auth.POST("/refresh", authHandler.Refresh)
+			}
+		}
+
+		// ── Protected (requires valid JWT) ────────────────────────────────────
+		if jwtSecret != "" {
+			protected := v1.Group("/")
+			protected.Use(middleware.RequireAuth(jwtSecret))
+			{
+				// TODO: favorites, history, preferences
+				// protected.GET("/favorites",  favHandler.List)
+				// protected.POST("/favorites", favHandler.Add)
+				// ...
+			}
+		}
 	}
 
 	return r

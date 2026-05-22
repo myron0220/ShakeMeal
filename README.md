@@ -270,6 +270,7 @@ curl "http://localhost:8080/api/v1/shake?lat=37.7749&lng=-122.4194"
 | Backend — Soft exclude / infinite shake | ✅ Done | Falls back to full pool when exclude list exhausts all options — user never hits a dead end |
 | iOS ↔ Backend — End-to-end wiring | ✅ Done | Shake → Go → JSON → card, exclude list, error states |
 | iOS ↔ Backend — Offline error handling | ✅ Done | "Could not connect" when server is down |
-| Backend — Auth (JWT + Sign in with Apple) | 🔜 Next | |
+| Backend — Auth (JWT + Sign in with Apple) | ✅ Done | `POST /api/v1/auth/apple` + `/auth/refresh`; Apple JWKS verification; JWT middleware; DB-optional (disabled gracefully when `DATABASE_URL` unset) |
+| iOS — Sign in with Apple + Keychain | ✅ Done | `AuthManager`, `KeychainHelper`, `ProfileView`; access + refresh tokens stored securely; auto-attached to every API request |
 | Backend — Favorites + History endpoints | 🔜 Next | |
 | Deploy backend to Railway / Fly.io | 🔜 Next | |
