@@ -5,8 +5,6 @@ struct RestaurantRevealView: View {
     let restaurant: Restaurant
     let onShakeAgain: () -> Void
 
-    @State private var appeared = false
-
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
@@ -39,10 +37,6 @@ struct RestaurantRevealView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .opacity(appeared ? 1 : 0)
-        .scaleEffect(appeared ? 1 : 0.94)
-        .animation(.spring(duration: 0.4), value: appeared)
-        .onAppear { appeared = true }
     }
 
     // MARK: - Sub-views
