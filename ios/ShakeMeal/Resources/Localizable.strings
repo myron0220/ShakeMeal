@@ -1,0 +1,16 @@
+/* ShakeMeal Localizable Strings */
+
+"shake.idle.title" = "Shake for a meal";
+"shake.idle.subtitle" = "Can't decide? Let us pick for you.";
+"shake.loading" = "Finding something delicious...";
+"shake.again" = "Shake Again";
+
+"tab.shake" = "Shake";
+"tab.history" = "History";
+"tab.favorites" = "Favorites";
+
+"filter.title" = "Filters";
+"filter.radius" = "Search Radius";
+"filter.cuisine" = "Cuisine";
+"filter.price" = "Price Range";
+"filter.reset" = "Reset Filters";

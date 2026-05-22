@@ -30,3 +30,21 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Xcode
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+*.xcuserstate
+*.xcscmblueprint
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# XcodeGen (regenerate with: xcodegen generate)
+ios/ShakeMeal.xcodeproj/
+
+# macOS
+.DS_Store
