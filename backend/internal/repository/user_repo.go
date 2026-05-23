@@ -20,6 +20,10 @@ func NewUserRepo(db *pgxpool.Pool) *UserRepo {
 
 // ── lookup helpers ────────────────────────────────────────────────────────────
 
+func (r *UserRepo) FindByID(ctx context.Context, id string) (*domain.User, error) {
+	return r.findOne(ctx, `id = $1`, id)
+}
+
 func (r *UserRepo) FindByAppleID(ctx context.Context, appleID string) (*domain.User, error) {
 	return r.findOne(ctx, `apple_id = $1`, appleID)
 }

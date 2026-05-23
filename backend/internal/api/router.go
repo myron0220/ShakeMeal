@@ -13,6 +13,7 @@ func NewRouter(
 	log *zap.Logger,
 	restaurantHandler *handlers.RestaurantHandler,
 	authHandler       *handlers.AuthHandler,       // nil when DB is not configured
+	meHandler         *handlers.MeHandler,         // nil when DB is not configured
 	favoritesHandler  *handlers.FavoritesHandler,  // nil when DB is not configured
 	historyHandler    *handlers.HistoryHandler,     // nil when DB is not configured
 	jwtSecret string,
@@ -46,6 +47,14 @@ func NewRouter(
 				auth.POST("/apple", authHandler.AppleSignIn)  // Sign in with Apple
 				auth.POST("/refresh", authHandler.Refresh)    // refresh JWT pair
 			}
+		}
+
+		// /auth/me is a protected route — separate from the public auth group
+		if meHandler != nil && jwtSecret != "" {
+			v1.GET("/auth/me",
+				middleware.RequireAuth(jwtSecret),
+				meHandler.Get,
+			)
 		}
 
 		// ── Protected (requires valid JWT) ────────────────────────────────────

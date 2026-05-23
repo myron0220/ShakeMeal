@@ -60,6 +60,9 @@ final class AuthManager: NSObject, ObservableObject {
         self.api = api
         super.init()
         isSignedIn = KeychainHelper.load(forKey: Key.accessToken) != nil
+        if isSignedIn {
+            Task { await fetchMe() }
+        }
     }
 
     // MARK: - Email / Phone + Password
@@ -121,6 +124,25 @@ final class AuthManager: NSObject, ObservableObject {
             } catch {
                 print("[AuthManager] Sign in with Apple failed:", error)
             }
+        }
+    }
+
+    // MARK: - Fetch current user profile
+
+    /// Loads the authenticated user's profile from the server and updates `self.user`.
+    /// Called on launch when a stored token exists, so the name/email is always shown.
+    func fetchMe() async {
+        do {
+            struct MeResponse: Decodable {
+                let user: UserProfile
+            }
+            let response: MeResponse = try await api.get("/api/v1/auth/me")
+            user = response.user
+        } catch APIError.unauthorized {
+            // Token expired/invalid — force sign-out
+            signOut()
+        } catch {
+            print("[AuthManager] fetchMe error:", error)
         }
     }
 

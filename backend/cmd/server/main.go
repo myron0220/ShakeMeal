@@ -37,6 +37,7 @@ func main() {
 
 	// ── Database (optional — auth/favorites/history disabled when not configured)
 	var authHandler      *handlers.AuthHandler
+	var meHandler        *handlers.MeHandler
 	var favoritesHandler *handlers.FavoritesHandler
 	var historyHandler   *handlers.HistoryHandler
 
@@ -61,6 +62,7 @@ func main() {
 
 		authSvc      := service.NewAuthService(userRepo, cfg.JWTSecret, cfg.AppleBundleID)
 		authHandler      = handlers.NewAuthHandler(authSvc)
+		meHandler        = handlers.NewMeHandler(userRepo)
 		favoritesHandler = handlers.NewFavoritesHandler(favsRepo)
 		historyHandler   = handlers.NewHistoryHandler(historyRepo)
 
@@ -85,7 +87,7 @@ func main() {
 	restaurantHandler := handlers.NewRestaurantHandler(shakeSvc)
 
 	// ── Router ───────────────────────────────────────────────────────────────
-	router := api.NewRouter(log, restaurantHandler, authHandler, favoritesHandler, historyHandler, cfg.JWTSecret)
+	router := api.NewRouter(log, restaurantHandler, authHandler, meHandler, favoritesHandler, historyHandler, cfg.JWTSecret)
 
 	// ── HTTP Server ──────────────────────────────────────────────────────────
 	srv := &http.Server{
