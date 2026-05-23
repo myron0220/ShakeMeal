@@ -74,8 +74,8 @@ struct ShakeView: View {
     @ViewBuilder
     private var locationTitle: some View {
         if let name = locationManager.placeName {
-            // Has address — show "Near you" + street
-            VStack(spacing: 1) {
+            // Has address — show "Near you" + street, both left-aligned
+            VStack(alignment: .leading, spacing: 1) {
                 Text("Near you")
                     .font(.system(size: 11, weight: .regular))
                     .foregroundStyle(AppColors.textSecondary)
@@ -91,10 +91,12 @@ struct ShakeView: View {
                         .truncationMode(.tail)
                 }
             }
+            // Cap width so long addresses truncate instead of pushing the filter button
+            .frame(maxWidth: 220, alignment: .leading)
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
         } else if locationManager.hasPermission {
-            // Permission granted but geocode not yet ready — pulse placeholder
-            VStack(spacing: 1) {
+            // Permission granted but geocode not yet ready
+            VStack(alignment: .leading, spacing: 1) {
                 Text("Near you")
                     .font(.system(size: 11, weight: .regular))
                     .foregroundStyle(AppColors.textSecondary)
