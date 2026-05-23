@@ -8,6 +8,7 @@ struct RestaurantRevealView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var isFavorited = false
     @State private var favoriteLoading = false
+    @State private var iconRotation: Double = 0
 
     var body: some View {
         ScrollView {
@@ -32,10 +33,19 @@ struct RestaurantRevealView: View {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 36, weight: .semibold))
                         .foregroundStyle(AppColors.primary)
+                        .rotationEffect(.degrees(iconRotation))
+                        .animation(.spring(response: 1.4, dampingFraction: 0.6), value: iconRotation)
                         .frame(width: 88, height: 88)
                         .background(AppColors.primary.opacity(0.12), in: .circle)
                 }
                 .padding(.bottom, 32)
+                .task {
+                    while !Task.isCancelled {
+                        try? await Task.sleep(for: .seconds(Double.random(in: 3...6)))
+                        guard !Task.isCancelled else { break }
+                        iconRotation += 720
+                    }
+                }
             }
         }
         .task {
