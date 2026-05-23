@@ -43,13 +43,15 @@ func (r *FavoritesRepo) List(ctx context.Context, userID string) ([]domain.Favor
 	return out, rows.Err()
 }
 
-// Add inserts a favorite (ignores duplicate — same user+place_id).
+// Add inserts a favorite. On duplicate (same user+place_id) it is a no-op
+// but still returns the existing row so the caller always gets a valid ID.
 func (r *FavoritesRepo) Add(ctx context.Context, f *domain.Favorite) error {
 	return r.db.QueryRow(ctx, `
 		INSERT INTO favorites (user_id, place_id, name, address, cuisine,
 		                       rating, price_level, latitude, longitude)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-		ON CONFLICT (user_id, place_id) DO NOTHING
+		ON CONFLICT (user_id, place_id) DO UPDATE
+		    SET created_at = favorites.created_at
 		RETURNING id, created_at
 	`, f.UserID, f.PlaceID, f.Name, f.Address, f.Cuisine,
 		f.Rating, f.PriceLevel, f.Latitude, f.Longitude,

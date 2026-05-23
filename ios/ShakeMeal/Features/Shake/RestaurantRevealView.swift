@@ -38,7 +38,10 @@ struct RestaurantRevealView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .task { await checkFavoriteStatus() }
+        .task {
+            await checkFavoriteStatus()
+            recordHistory()   // record every shake result automatically
+        }
     }
 
     // MARK: - Sub-views
@@ -97,9 +100,8 @@ struct RestaurantRevealView: View {
 
     private var actionButtons: some View {
         HStack(spacing: 12) {
-            // Directions — also records history
+            // Directions
             Button {
-                recordHistory()
                 openInMaps()
             } label: {
                 Label("Directions", systemImage: "map.fill")

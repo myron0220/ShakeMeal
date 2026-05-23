@@ -13,7 +13,25 @@ final class APIClient {
         self.decoder = JSONDecoder()
         // No keyDecodingStrategy — all models use explicit CodingKeys for snake_case mapping.
         // convertFromSnakeCase conflicts with explicit CodingKeys (transforms keys before matching).
-        self.decoder.dateDecodingStrategy = .iso8601
+
+        // Go's time.Time marshals with fractional seconds (e.g. "2026-05-23T00:16:46.37434-04:00").
+        // Swift's built-in .iso8601 strategy does NOT handle fractional seconds, so we use a
+        // custom decoder that tries with fractional seconds first, then falls back.
+        let withFrac    = ISO8601DateFormatter()
+        withFrac.formatOptions    = [.withInternetDateTime, .withFractionalSeconds]
+        let withoutFrac = ISO8601DateFormatter()
+        withoutFrac.formatOptions = [.withInternetDateTime]
+
+        self.decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let str = try container.decode(String.self)
+            if let date = withFrac.date(from: str)    { return date }
+            if let date = withoutFrac.date(from: str) { return date }
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: decoder.codingPath,
+                debugDescription: "Cannot parse date: \(str)"
+            ))
+        }
     }
 
     // MARK: - GET
