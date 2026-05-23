@@ -46,8 +46,8 @@ struct ShakeView: View {
             .navigationBarTitleDisplayMode(.inline)
             .animation(.easeInOut(duration: 0.3), value: locationManager.placeName)
             .toolbar {
-                // ── Location header (centre) ────────────────────────────────
-                ToolbarItem(placement: .principal) {
+                // ── Location header (leading) ───────────────────────────────
+                ToolbarItem(placement: .topBarLeading) {
                     locationTitle
                 }
                 // ── Filter (trailing) ───────────────────────────────────────
