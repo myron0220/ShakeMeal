@@ -448,15 +448,16 @@ make migrate-reset # drop all tables (destructive)
 
 ## Stable Baseline
 
-Current baseline: **`252e26d`** — all features verified working locally (MacBook Pro, simulator + real device).
+Current baseline: **`26be0cc`** — restaurant card redesign, verified on simulator.
 
+- Restaurant info: flat section below photo (no card/rounded rect), white page background
+- Directions button: systemGray6 background, sky-blue text
 - Shake → restaurant reveal (guaranteed spring slide-up, no flash, nav bar never covered)
 - Real-time location in nav bar top-left (CLGeocoder, 1/3 screen width, truncates cleanly)
 - Custom tab bar (spring bounce + haptic, safeAreaInset)
 - Favorites + history (3-item cap in ProfileView)
 - Mock data: 5 real Mississauga restaurants with Unsplash photos
 - Backend: local `go run ./cmd/server` with mock provider (no DB or API key needed for basic shake)
-- Backend: Viper BindEnv fix — all env vars correctly loaded from Fly.io secrets / `.env`
 - AppConfig → `http://localhost:8080` (local dev mode)
 
 > **To revert here:** `git revert <commits>` — see project memory for details.
