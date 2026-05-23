@@ -14,21 +14,22 @@ func NewMockPlacesProvider() *MockPlacesProvider {
 	return &MockPlacesProvider{}
 }
 
+// Mock restaurants near 3900 Confederation Pkwy, Mississauga, ON (Square One area)
 var mockRestaurants = []domain.Restaurant{
-	{ID: "mock-001", Name: "Golden Dragon", Address: "123 Main St", Cuisine: "Chinese",
-		Rating: 4.5, PriceLevel: 2, Latitude: 37.7749, Longitude: -122.4194, DistanceMeters: 350,
+	{ID: "mock-001", Name: "Golden Dragon", Address: "4 Robert Speck Pkwy, Mississauga, ON", Cuisine: "Chinese",
+		Rating: 4.5, PriceLevel: 2, Latitude: 43.5961, Longitude: -79.6441, DistanceMeters: 350,
 		PhotoURL: "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=800"},
-	{ID: "mock-002", Name: "Sakura Ramen", Address: "456 Oak Ave", Cuisine: "Japanese",
-		Rating: 4.8, PriceLevel: 2, Latitude: 37.7750, Longitude: -122.4180, DistanceMeters: 600,
+	{ID: "mock-002", Name: "Sakura Ramen", Address: "325 Burnhamthorpe Rd W, Mississauga, ON", Cuisine: "Japanese",
+		Rating: 4.8, PriceLevel: 2, Latitude: 43.5875, Longitude: -79.6380, DistanceMeters: 600,
 		PhotoURL: "https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=800"},
-	{ID: "mock-003", Name: "Taco Loco", Address: "789 Pine Rd", Cuisine: "Mexican",
-		Rating: 4.2, PriceLevel: 1, Latitude: 37.7760, Longitude: -122.4200, DistanceMeters: 900,
+	{ID: "mock-003", Name: "Taco Loco", Address: "151 City Centre Dr, Mississauga, ON", Cuisine: "Mexican",
+		Rating: 4.2, PriceLevel: 1, Latitude: 43.5850, Longitude: -79.6500, DistanceMeters: 900,
 		PhotoURL: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800"},
-	{ID: "mock-004", Name: "Bella Italia", Address: "321 Elm St", Cuisine: "Italian",
-		Rating: 4.6, PriceLevel: 3, Latitude: 37.7745, Longitude: -122.4210, DistanceMeters: 450,
+	{ID: "mock-004", Name: "Bella Italia", Address: "100 City Centre Dr, Mississauga, ON", Cuisine: "Italian",
+		Rating: 4.6, PriceLevel: 3, Latitude: 43.5895, Longitude: -79.6480, DistanceMeters: 450,
 		PhotoURL: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800"},
-	{ID: "mock-005", Name: "Spice Garden", Address: "654 Maple Ave", Cuisine: "Indian",
-		Rating: 4.3, PriceLevel: 2, Latitude: 37.7755, Longitude: -122.4185, DistanceMeters: 750,
+	{ID: "mock-005", Name: "Spice Garden", Address: "77 Confederation Pkwy, Mississauga, ON", Cuisine: "Indian",
+		Rating: 4.3, PriceLevel: 2, Latitude: 43.5970, Longitude: -79.6350, DistanceMeters: 750,
 		PhotoURL: "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=800"},
 }
 
