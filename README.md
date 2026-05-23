@@ -417,3 +417,6 @@ make migrate-reset # drop all tables (destructive)
 | iOS — Email / Phone + Password auth | ✅ Done | `ProfileView` form with Register/Sign In toggle; wired to `AuthManager`; works on simulator |
 | Backend — Favorites + History endpoints | 🔜 Next | |
 | Deploy backend to Railway / Fly.io | 🔜 Next | |
+
+- core idea by me:
+  - piano sounds
