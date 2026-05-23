@@ -418,5 +418,5 @@ make migrate-reset # drop all tables (destructive)
 | Backend — Favorites + History endpoints | 🔜 Next | |
 | Deploy backend to Railway / Fly.io | 🔜 Next | |
 
-- core idea by me:
-  - piano sounds
+## Core Idea by Me:
+  - Piano sounds
