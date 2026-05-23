@@ -18,6 +18,21 @@ func Load() (*Config, error) {
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv()
 
+	// Explicitly bind every env var so viper.Unmarshal picks them up.
+	// AutomaticEnv() alone does NOT populate Unmarshal — this is a known
+	// Viper limitation. Without BindEnv the secrets set on Fly.io are
+	// silently ignored and auth/db routes never register.
+	for _, key := range []string{
+		"PORT", "ENV",
+		"DATABASE_URL",
+		"JWT_SECRET",
+		"GOOGLE_PLACES_API_KEY",
+		"APPLE_BUNDLE_ID",
+		"PLACES_CACHE_TTL_MINUTES",
+	} {
+		_ = viper.BindEnv(key)
+	}
+
 	// Defaults
 	viper.SetDefault("PORT", "8080")
 	viper.SetDefault("ENV", "development")
