@@ -448,7 +448,7 @@ make migrate-reset # drop all tables (destructive)
 
 ## Stable Baseline
 
-Current baseline: **`1a1dba3`** — iterative UI polish, verified on simulator.
+Current baseline: **`1ac8f30`** — mock data expanded to 22 restaurants, verified on simulator.
 
 - Restaurant info: flat section below photo (no card/rounded rect), white page background
 - Shake-again: arc ring (6.18% gap, 80pt, round linecap), occasional spring-bounce rotation every 6–12s
