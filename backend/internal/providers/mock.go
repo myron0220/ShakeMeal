@@ -14,23 +14,23 @@ func NewMockPlacesProvider() *MockPlacesProvider {
 	return &MockPlacesProvider{}
 }
 
-// Mock restaurants near 3900 Confederation Pkwy, Mississauga, ON (Square One area)
+// Real restaurants near 3900 Confederation Pkwy, Mississauga, ON L5B 0M3
 var mockRestaurants = []domain.Restaurant{
-	{ID: "mock-001", Name: "Golden Dragon", Address: "4 Robert Speck Pkwy, Mississauga, ON", Cuisine: "Chinese",
-		Rating: 4.5, PriceLevel: 2, Latitude: 43.5961, Longitude: -79.6441, DistanceMeters: 350,
-		PhotoURL: "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=800"},
-	{ID: "mock-002", Name: "Sakura Ramen", Address: "325 Burnhamthorpe Rd W, Mississauga, ON", Cuisine: "Japanese",
-		Rating: 4.8, PriceLevel: 2, Latitude: 43.5875, Longitude: -79.6380, DistanceMeters: 600,
+	{ID: "mock-001", Name: "Kinton Ramen", Address: "4026 Confederation Pkwy, Mississauga, ON L5B 0G4", Cuisine: "Japanese",
+		Rating: 4.4, PriceLevel: 2, Latitude: 43.5935, Longitude: -79.6423, DistanceMeters: 150,
 		PhotoURL: "https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=800"},
-	{ID: "mock-003", Name: "Taco Loco", Address: "151 City Centre Dr, Mississauga, ON", Cuisine: "Mexican",
-		Rating: 4.2, PriceLevel: 1, Latitude: 43.5850, Longitude: -79.6500, DistanceMeters: 900,
-		PhotoURL: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800"},
-	{ID: "mock-004", Name: "Bella Italia", Address: "100 City Centre Dr, Mississauga, ON", Cuisine: "Italian",
-		Rating: 4.6, PriceLevel: 3, Latitude: 43.5895, Longitude: -79.6480, DistanceMeters: 450,
+	{ID: "mock-002", Name: "Osmow's Shawarma", Address: "100 City Centre Dr Unit 1-830, Mississauga, ON L5B 2C9", Cuisine: "Middle Eastern",
+		Rating: 4.5, PriceLevel: 1, Latitude: 43.5920, Longitude: -79.6440, DistanceMeters: 280,
+		PhotoURL: "https://images.unsplash.com/photo-1561043433-aaf687c4cf04?w=800"},
+	{ID: "mock-003", Name: "Moxies", Address: "100 City Centre Dr, Mississauga, ON L5B 2C9", Cuisine: "Canadian",
+		Rating: 4.0, PriceLevel: 3, Latitude: 43.5927, Longitude: -79.6445, DistanceMeters: 320,
+		PhotoURL: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800"},
+	{ID: "mock-004", Name: "Scaddabush Italian Kitchen & Bar", Address: "209 Rathburn Rd W, Mississauga, ON L5B 4C1", Cuisine: "Italian",
+		Rating: 4.6, PriceLevel: 3, Latitude: 43.5892, Longitude: -79.6390, DistanceMeters: 650,
 		PhotoURL: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800"},
-	{ID: "mock-005", Name: "Spice Garden", Address: "77 Confederation Pkwy, Mississauga, ON", Cuisine: "Indian",
-		Rating: 4.3, PriceLevel: 2, Latitude: 43.5970, Longitude: -79.6350, DistanceMeters: 750,
-		PhotoURL: "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=800"},
+	{ID: "mock-005", Name: "Gyubee Japanese Grill", Address: "4559 Hurontario St Unit A2, Mississauga, ON L4Z 3L9", Cuisine: "Japanese BBQ",
+		Rating: 4.3, PriceLevel: 3, Latitude: 43.6097, Longitude: -79.6290, DistanceMeters: 2200,
+		PhotoURL: "https://images.unsplash.com/photo-1544025162-d76694265947?w=800"},
 }
 
 func (m *MockPlacesProvider) NearbyRestaurants(_ context.Context, _ NearbyRequest) ([]domain.Restaurant, error) {
