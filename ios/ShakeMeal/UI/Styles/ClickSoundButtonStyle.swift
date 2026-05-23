@@ -6,9 +6,8 @@ import UIKit
 enum SoundPlayer {
     private static let chime = ChimePlayer()
 
-    /// Crisp bell-like tap: light haptic + synthesised two-tone chime with a
-    /// natural decay tail (~350 ms audible) — similar to Nintendo Switch UI sounds.
-    /// Respects the device silent switch via AVAudioSession.ambient.
+    /// Nintendo Switch–style UI chirp: light haptic + fast upward frequency
+    /// sweep that makes the app feel instant and responsive.
     static func click() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         chime.play()
@@ -17,8 +16,6 @@ enum SoundPlayer {
 
 // MARK: - Chime synthesiser
 
-/// Pre-renders a PCM buffer at init time, then plays it instantly on every tap.
-/// Two sine waves + exponential decay → bright attack with a clean tail.
 private final class ChimePlayer {
     private let engine     = AVAudioEngine()
     private let playerNode = AVAudioPlayerNode()
@@ -29,8 +26,8 @@ private final class ChimePlayer {
         try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
         try? AVAudioSession.sharedInstance().setActive(true)
 
-        let sampleRate: Double  = 44100
-        let duration:   Double  = 0.7        // 700 ms — enough room for the tail
+        let sampleRate: Double = 44100
+        let duration:   Double = 0.35       // 350 ms buffer (sound mostly done by 220 ms)
         let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1)!
         let frameCount = AVAudioFrameCount(sampleRate * duration)
 
@@ -38,19 +35,32 @@ private final class ChimePlayer {
         buf.frameLength = frameCount
         let samples = buf.floatChannelData![0]
 
-        // A5 (880 Hz) + E6 (1320 Hz) — fundamental + perfect-fifth overtone
-        // Gives the warm-but-crisp character of Switch UI sounds
-        let f1: Double = 880    // fundamental — brightness
-        let f2: Double = 1320   // overtone — adds body
-        let decay: Double = 7.0 // exp decay; ~50 % amplitude at 100 ms, tail audible ~350 ms
-        let gain: Float = 0.38  // moderate — present without being sharp
+        // ── Sound design ────────────────────────────────────────────────────
+        // Frequency chirp: 800 Hz → 1100 Hz over the first 40 ms, then holds.
+        // Upward glide gives the "quick & decisive" feeling of NS UI sounds.
+        let freqStart:  Double = 800
+        let freqEnd:    Double = 1100
+        let chirpTime:  Double = 0.040  // 40 ms sweep
+        let decay:      Double = 11.0   // fast decay; ~30 % at 100 ms, tail gone ~280 ms
+        let gain:       Float  = 0.30   // moderate — not harsh
+
+        var phase = 0.0  // continuous phase accumulator (prevents clicks at freq change)
 
         for i in 0..<Int(frameCount) {
             let t = Double(i) / sampleRate
-            let envelope = Float(exp(-decay * t))
-            let wave     = Float(0.7 * sin(2 * .pi * f1 * t) +
-                                 0.3 * sin(2 * .pi * f2 * t))
-            samples[i] = wave * envelope * gain
+
+            // Smooth linear frequency ramp during chirp window
+            let freq = t < chirpTime
+                ? freqStart + (freqEnd - freqStart) * (t / chirpTime)
+                : freqEnd
+
+            // 3 ms soft attack to avoid onset click, then pure exponential decay
+            let attackRamp = t < 0.003 ? Float(t / 0.003) : 1.0
+            let envelope   = attackRamp * Float(exp(-decay * t))
+
+            samples[i] = Float(sin(2 * .pi * phase)) * envelope * gain
+            phase += freq / sampleRate
+            if phase >= 1.0 { phase -= 1.0 }
         }
 
         buffer = buf
@@ -65,7 +75,6 @@ private final class ChimePlayer {
     func play() {
         guard let buf = buffer else { return }
         if !engine.isRunning { try? engine.start() }
-        // Schedule without stopping so rapid taps blend naturally
         playerNode.scheduleBuffer(buf)
     }
 }
