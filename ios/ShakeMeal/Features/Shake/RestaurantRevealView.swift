@@ -28,10 +28,8 @@ struct RestaurantRevealView: View {
                     Divider()
                     actionButtons
                 }
-                .padding(24)
-                .background(AppColors.card, in: .rect(cornerRadius: 24))
-                .padding(.horizontal, 16)
-                .offset(y: -24)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 24)
 
                 Button {
                     SoundPlayer.click()
@@ -55,6 +53,7 @@ struct RestaurantRevealView: View {
                 }
             }
         }
+        .background(.white)
         .offset(y: slideOffset)
         .opacity(slideOpacity)
         .onAppear {
@@ -137,10 +136,10 @@ struct RestaurantRevealView: View {
             } label: {
                 Label("Directions", systemImage: "map.fill")
                     .font(AppFonts.button)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color(red: 0.35, green: 0.78, blue: 1.0))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(AppColors.primary, in: .capsule)
+                    .background(.white, in: .capsule)
             }
 
             // Favorite toggle
