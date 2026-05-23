@@ -35,8 +35,11 @@ func main() {
 		zap.String("port", cfg.Port),
 	)
 
-	// ── Database (optional — auth routes disabled when not configured) ───────
-	var authHandler *handlers.AuthHandler
+	// ── Database (optional — auth/favorites/history disabled when not configured)
+	var authHandler      *handlers.AuthHandler
+	var favoritesHandler *handlers.FavoritesHandler
+	var historyHandler   *handlers.HistoryHandler
+
 	if cfg.DatabaseURL != "" {
 		db, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
 		if err != nil {
@@ -52,14 +55,20 @@ func main() {
 			log.Fatal("JWT_SECRET must be set when DATABASE_URL is configured")
 		}
 
-		userRepo := repository.NewUserRepo(db)
-		authSvc := service.NewAuthService(userRepo, cfg.JWTSecret, cfg.AppleBundleID)
-		authHandler = handlers.NewAuthHandler(authSvc)
-		log.Info("auth enabled",
+		userRepo     := repository.NewUserRepo(db)
+		favsRepo     := repository.NewFavoritesRepo(db)
+		historyRepo  := repository.NewHistoryRepo(db)
+
+		authSvc      := service.NewAuthService(userRepo, cfg.JWTSecret, cfg.AppleBundleID)
+		authHandler      = handlers.NewAuthHandler(authSvc)
+		favoritesHandler = handlers.NewFavoritesHandler(favsRepo)
+		historyHandler   = handlers.NewHistoryHandler(historyRepo)
+
+		log.Info("auth + favorites + history enabled",
 			zap.String("apple_bundle_id", cfg.AppleBundleID),
 		)
 	} else {
-		log.Warn("DATABASE_URL not set — auth endpoints disabled")
+		log.Warn("DATABASE_URL not set — auth/favorites/history endpoints disabled")
 	}
 
 	// ── Places provider ──────────────────────────────────────────────────────
@@ -76,7 +85,7 @@ func main() {
 	restaurantHandler := handlers.NewRestaurantHandler(shakeSvc)
 
 	// ── Router ───────────────────────────────────────────────────────────────
-	router := api.NewRouter(log, restaurantHandler, authHandler, cfg.JWTSecret)
+	router := api.NewRouter(log, restaurantHandler, authHandler, favoritesHandler, historyHandler, cfg.JWTSecret)
 
 	// ── HTTP Server ──────────────────────────────────────────────────────────
 	srv := &http.Server{

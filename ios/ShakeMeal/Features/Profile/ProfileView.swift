@@ -8,7 +8,6 @@ struct ProfileView: View {
         NavigationStack {
             ZStack {
                 AppColors.background.ignoresSafeArea()
-
                 if authManager.isSignedIn {
                     SignedInView()
                 } else {
@@ -21,15 +20,208 @@ struct ProfileView: View {
     }
 }
 
-// MARK: - Signed-out state
+// MARK: - Signed-in view (profile header + favorites + history)
+
+private struct SignedInView: View {
+    @EnvironmentObject var authManager: AuthManager
+    @StateObject private var store = SocialStore()
+
+    var body: some View {
+        List {
+            // ── Profile header ───────────────────────────────────────────────
+            Section {
+                HStack(spacing: 16) {
+                    Image(systemName: "person.circle.fill")
+                        .font(.system(size: 52))
+                        .foregroundStyle(AppColors.primary)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let name = authManager.user?.name, !name.isEmpty {
+                            Text(name)
+                                .font(AppFonts.heading)
+                                .foregroundStyle(AppColors.textPrimary)
+                        }
+                        if let email = authManager.user?.email {
+                            Text(email).font(AppFonts.meta).foregroundStyle(AppColors.textSecondary)
+                        } else if let phone = authManager.user?.phone {
+                            Text(phone).font(AppFonts.meta).foregroundStyle(AppColors.textSecondary)
+                        }
+                        if authManager.user?.isPro == true {
+                            Label("Pro", systemImage: "star.fill")
+                                .font(AppFonts.meta.bold())
+                                .foregroundStyle(AppColors.star)
+                        }
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+
+            // ── Favorites ────────────────────────────────────────────────────
+            Section {
+                if store.favoritesLoading {
+                    HStack { Spacer(); ProgressView(); Spacer() }
+                } else if store.favorites.isEmpty {
+                    Text("No favorites yet — heart a restaurant after shaking!")
+                        .font(AppFonts.meta)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .padding(.vertical, 4)
+                } else {
+                    ForEach(store.favorites) { fav in
+                        PlaceRow(
+                            name:       fav.name,
+                            subtitle:   fav.cuisine,
+                            meta:       "\(fav.priceDisplay) · ⭐ \(String(format: "%.1f", fav.rating))",
+                            systemIcon: "heart.fill",
+                            iconColor:  AppColors.primary
+                        )
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                store.removeFavorite(placeID: fav.placeID)
+                            } label: {
+                                Label("Remove", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Label("Favorites", systemImage: "heart.fill")
+                    .foregroundStyle(AppColors.primary)
+            }
+
+            // ── History ──────────────────────────────────────────────────────
+            Section {
+                if store.historyLoading {
+                    HStack { Spacer(); ProgressView(); Spacer() }
+                } else if store.history.isEmpty {
+                    Text("No history yet — start shaking!")
+                        .font(AppFonts.meta)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .padding(.vertical, 4)
+                } else {
+                    ForEach(store.history) { item in
+                        PlaceRow(
+                            name:       item.name,
+                            subtitle:   item.cuisine,
+                            meta:       item.shookAt.formatted(date: .abbreviated, time: .omitted),
+                            systemIcon: "clock.fill",
+                            iconColor:  AppColors.textSecondary
+                        )
+                    }
+                }
+            } header: {
+                Label("History", systemImage: "clock.fill")
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+
+            // ── Sign out ─────────────────────────────────────────────────────
+            Section {
+                Button(role: .destructive) {
+                    authManager.signOut()
+                } label: {
+                    HStack {
+                        Spacer()
+                        Text("Sign Out").font(AppFonts.button)
+                        Spacer()
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .refreshable { await store.load() }
+        .task { await store.load() }
+    }
+}
+
+// MARK: - Reusable place row
+
+private struct PlaceRow: View {
+    let name:       String
+    let subtitle:   String
+    let meta:       String
+    let systemIcon: String
+    let iconColor:  Color
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemIcon)
+                .foregroundStyle(iconColor)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name)
+                    .font(AppFonts.bodyBold)
+                    .foregroundStyle(AppColors.textPrimary)
+                Text(subtitle)
+                    .font(AppFonts.meta)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+
+            Spacer()
+
+            Text(meta)
+                .font(AppFonts.meta)
+                .foregroundStyle(AppColors.textSecondary)
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+// MARK: - SocialStore (loads favorites + history)
+
+@MainActor
+final class SocialStore: ObservableObject {
+    @Published var favorites:       [FavoriteItem] = []
+    @Published var history:         [HistoryItem]  = []
+    @Published var favoritesLoading = false
+    @Published var historyLoading   = false
+
+    private let api: APIClient
+
+    init(api: APIClient = .shared) {
+        self.api = api
+    }
+
+    func load() async {
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await self.loadFavorites() }
+            group.addTask { await self.loadHistory() }
+        }
+    }
+
+    func loadFavorites() async {
+        favoritesLoading = true
+        defer { favoritesLoading = false }
+        do { favorites = try await api.getFavorites() }
+        catch { print("[SocialStore] favorites error:", error) }
+    }
+
+    func loadHistory() async {
+        historyLoading = true
+        defer { historyLoading = false }
+        do { history = try await api.getHistory() }
+        catch { print("[SocialStore] history error:", error) }
+    }
+
+    func removeFavorite(placeID: String) {
+        Task {
+            do {
+                try await api.deleteFavorite(placeID: placeID)
+                favorites.removeAll { $0.placeID == placeID }
+            } catch {
+                print("[SocialStore] remove favorite error:", error)
+            }
+        }
+    }
+}
+
+// MARK: - Signed-out view
 
 private struct SignedOutView: View {
     @EnvironmentObject var authManager: AuthManager
 
-    // Form state
-    @State private var identifier  = ""   // email or phone
+    @State private var identifier  = ""
     @State private var password    = ""
-    @State private var name        = ""   // register only
+    @State private var name        = ""
     @State private var isRegister  = false
     @State private var errorMessage: String?
 
@@ -38,12 +230,10 @@ private struct SignedOutView: View {
             VStack(spacing: 28) {
                 Spacer().frame(height: 12)
 
-                // Avatar
                 Image(systemName: "person.circle")
                     .font(.system(size: 72))
                     .foregroundStyle(AppColors.textSecondary)
 
-                // Tab toggle: Login / Register
                 Picker("", selection: $isRegister) {
                     Text("Sign In").tag(false)
                     Text("Register").tag(true)
@@ -51,7 +241,6 @@ private struct SignedOutView: View {
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 32)
 
-                // Form
                 VStack(spacing: 14) {
                     if isRegister {
                         TextField("Name (optional)", text: $name)
@@ -59,9 +248,7 @@ private struct SignedOutView: View {
                             .autocorrectionDisabled()
                             .styledField()
                     }
-
                     TextField("Email or phone number", text: $identifier)
-                        .textContentType(isRegister ? .username : .username)
                         .keyboardType(.emailAddress)
                         .autocorrectionDisabled()
                         .autocapitalization(.none)
@@ -73,7 +260,6 @@ private struct SignedOutView: View {
                 }
                 .padding(.horizontal, 32)
 
-                // Error
                 if let msg = errorMessage {
                     Text(msg)
                         .font(AppFonts.meta)
@@ -82,7 +268,6 @@ private struct SignedOutView: View {
                         .padding(.horizontal, 32)
                 }
 
-                // Primary action button
                 Button(action: submit) {
                     if authManager.isLoading {
                         ProgressView().tint(.white)
@@ -101,7 +286,6 @@ private struct SignedOutView: View {
                 .disabled(identifier.isEmpty || password.isEmpty || authManager.isLoading)
                 .padding(.horizontal, 32)
 
-                // Divider
                 HStack {
                     Rectangle().frame(height: 1).foregroundStyle(AppColors.textSecondary.opacity(0.2))
                     Text("or").font(AppFonts.meta).foregroundStyle(AppColors.textSecondary)
@@ -109,13 +293,12 @@ private struct SignedOutView: View {
                 }
                 .padding(.horizontal, 32)
 
-                // Sign in with Apple (real device only)
                 SignInWithAppleButton(.signIn) { request in
                     request.requestedScopes = [.fullName, .email]
                 } onCompletion: { result in
                     switch result {
                     case .success(let auth): authManager.handleAuthorization(auth)
-                    case .failure(let err):  print("[ProfileView] Apple sign-in error:", err)
+                    case .failure(let err):  print("[ProfileView] Apple error:", err)
                     }
                 }
                 .signInWithAppleButtonStyle(.black)
@@ -133,12 +316,9 @@ private struct SignedOutView: View {
         Task {
             do {
                 if isRegister {
-                    try await authManager.register(identifier: identifier,
-                                                   password: password,
-                                                   name: name)
+                    try await authManager.register(identifier: identifier, password: password, name: name)
                 } else {
-                    try await authManager.login(identifier: identifier,
-                                                password: password)
+                    try await authManager.login(identifier: identifier, password: password)
                 }
             } catch let apiError as APIError {
                 errorMessage = apiError.localizedDescription
@@ -158,64 +338,6 @@ private extension View {
             .padding(.vertical, 14)
             .background(AppColors.card, in: .rect(cornerRadius: 12))
             .font(AppFonts.body)
-    }
-}
-
-// MARK: - Signed-in state
-
-private struct SignedInView: View {
-    @EnvironmentObject var authManager: AuthManager
-
-    var body: some View {
-        VStack(spacing: 32) {
-            Spacer()
-
-            VStack(spacing: 12) {
-                Image(systemName: "person.circle.fill")
-                    .font(.system(size: 72))
-                    .foregroundStyle(AppColors.primary)
-
-                if let name = authManager.user?.name, !name.isEmpty {
-                    Text(name)
-                        .font(AppFonts.heading)
-                        .foregroundStyle(AppColors.textPrimary)
-                }
-
-                if let email = authManager.user?.email {
-                    Text(email)
-                        .font(AppFonts.body)
-                        .foregroundStyle(AppColors.textSecondary)
-                } else if let phone = authManager.user?.phone {
-                    Text(phone)
-                        .font(AppFonts.body)
-                        .foregroundStyle(AppColors.textSecondary)
-                }
-
-                if authManager.user?.isPro == true {
-                    Label("Pro", systemImage: "star.fill")
-                        .font(AppFonts.meta.bold())
-                        .foregroundStyle(AppColors.star)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .background(AppColors.star.opacity(0.15), in: .capsule)
-                }
-            }
-
-            Spacer()
-
-            Button(role: .destructive) {
-                authManager.signOut()
-            } label: {
-                Text("Sign Out")
-                    .font(AppFonts.button)
-                    .foregroundStyle(AppColors.warning)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(AppColors.warning.opacity(0.1), in: .capsule)
-            }
-            .padding(.horizontal, 32)
-            .padding(.bottom, 48)
-        }
     }
 }
 

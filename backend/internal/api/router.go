@@ -12,7 +12,9 @@ import (
 func NewRouter(
 	log *zap.Logger,
 	restaurantHandler *handlers.RestaurantHandler,
-	authHandler *handlers.AuthHandler, // nil when DB is not configured
+	authHandler       *handlers.AuthHandler,       // nil when DB is not configured
+	favoritesHandler  *handlers.FavoritesHandler,  // nil when DB is not configured
+	historyHandler    *handlers.HistoryHandler,     // nil when DB is not configured
 	jwtSecret string,
 ) *gin.Engine {
 	r := gin.New()
@@ -47,14 +49,16 @@ func NewRouter(
 		}
 
 		// ── Protected (requires valid JWT) ────────────────────────────────────
-		if jwtSecret != "" {
+		if jwtSecret != "" && favoritesHandler != nil && historyHandler != nil {
 			protected := v1.Group("/")
 			protected.Use(middleware.RequireAuth(jwtSecret))
 			{
-				// TODO: favorites, history, preferences
-				// protected.GET("/favorites",  favHandler.List)
-				// protected.POST("/favorites", favHandler.Add)
-				// ...
+				protected.GET("/favorites",              favoritesHandler.List)
+				protected.POST("/favorites",             favoritesHandler.Add)
+				protected.DELETE("/favorites/:place_id", favoritesHandler.Remove)
+
+				protected.GET("/history",  historyHandler.List)
+				protected.POST("/history", historyHandler.Add)
 			}
 		}
 	}

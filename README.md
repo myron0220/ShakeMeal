@@ -100,7 +100,8 @@ ShakeMeal/
 │       │       ├── APIError.swift             # Typed network errors
 │       │       └── Models/
 │       │           ├── Restaurant.swift       # Restaurant model + CodingKeys + mock data
-│       │           └── ShakeFilter.swift      # Filter model (radius, cuisine, price)
+│       │           ├── ShakeFilter.swift      # Filter model (radius, cuisine, price)
+│       │           └── SocialModels.swift     # FavoriteItem + HistoryItem + response wrappers
 │       │
 │       ├── Features/
 │       │   ├── Shake/                         # ★ Main feature
@@ -134,7 +135,8 @@ ShakeMeal/
     │   │   └── config.go                      # Env vars via Viper
     │   ├── domain/
     │   │   ├── restaurant.go                  # Restaurant model + ShakeRequest
-    │   │   └── user.go                        # User + UserPreference models
+    │   │   ├── user.go                        # User + UserPreference models
+    │   │   └── social.go                      # Favorite + HistoryItem models
     │   ├── api/
     │   │   ├── router.go                      # Gin router + middleware wiring
     │   │   ├── middleware/
@@ -143,9 +145,13 @@ ShakeMeal/
     │   │   └── handlers/
     │   │       ├── health.go                  # GET /health
     │   │       ├── restaurants.go             # GET /api/v1/shake
-    │   │       └── auth.go                    # POST /auth/register · /login · /apple · /refresh
+    │   │       ├── auth.go                    # POST /auth/register · /login · /apple · /refresh
+    │   │       ├── favorites.go               # GET/POST/DELETE /api/v1/favorites
+    │   │       └── history.go                 # GET/POST /api/v1/history
     │   ├── repository/
-    │   │   └── user_repo.go                   # Postgres CRUD for users
+    │   │   ├── user_repo.go                   # Postgres CRUD for users
+    │   │   ├── favorites_repo.go              # List / Add / Remove / IsFavorited
+    │   │   └── history_repo.go                # List / Add
     │   ├── service/
     │   │   ├── shake_service.go               # Fetch + filter + randomise logic
     │   │   └── auth_service.go                # Register, Login, SignInWithApple, RefreshTokens
@@ -415,8 +421,9 @@ make migrate-reset # drop all tables (destructive)
 | Backend — Auth (Email / Phone + Password) | ✅ Done | `POST /api/v1/auth/register` + `/auth/login`; bcrypt (cost 12); identifier auto-detected as email or phone |
 | iOS — Sign in with Apple + Keychain | 🔜 TODO | Code complete; needs real-device test with Apple ID — simulator login not possible |
 | iOS — Email / Phone + Password auth | ✅ Done | `ProfileView` form with Register/Sign In toggle; wired to `AuthManager`; works on simulator |
-| Backend — Favorites + History endpoints | 🔜 Next | |
+| Backend — Favorites + History endpoints | ✅ Done | `GET/POST/DELETE /api/v1/favorites` · `GET/POST /api/v1/history`; JWT-protected; smoke tested |
+| iOS — Favorites + History in Profile | ✅ Done | 2-tab layout (Shake + Profile); ❤️ toggle on result card; history on Directions tap; pull-to-refresh |
 | Deploy backend to Railway / Fly.io | 🔜 Next | |
 
-## Core Idea by Me:
+## Core Ideas by Me:
   - Piano sounds

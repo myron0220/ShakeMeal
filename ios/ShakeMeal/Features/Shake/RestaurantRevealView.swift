@@ -5,13 +5,15 @@ struct RestaurantRevealView: View {
     let restaurant: Restaurant
     let onShakeAgain: () -> Void
 
+    @EnvironmentObject var authManager: AuthManager
+    @State private var isFavorited = false
+    @State private var favoriteLoading = false
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                // Photo / Header
                 photoHeader
 
-                // Details card
                 VStack(alignment: .leading, spacing: 20) {
                     nameSection
                     metaRow
@@ -23,7 +25,6 @@ struct RestaurantRevealView: View {
                 .padding(.horizontal, 16)
                 .offset(y: -24)
 
-                // Shake Again
                 Button(action: onShakeAgain) {
                     Label("Shake Again", systemImage: "arrow.clockwise")
                         .font(AppFonts.button)
@@ -37,9 +38,11 @@ struct RestaurantRevealView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
+        .task { await checkFavoriteStatus() }
     }
 
     // MARK: - Sub-views
+
     private var photoHeader: some View {
         ZStack(alignment: .bottom) {
             if let url = restaurant.photoURL {
@@ -62,10 +65,7 @@ struct RestaurantRevealView: View {
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
-        .overlay {
-            Text("🍽️")
-                .font(.system(size: 72))
-        }
+        .overlay { Text("🍽️").font(.system(size: 72)) }
     }
 
     private var nameSection: some View {
@@ -73,7 +73,6 @@ struct RestaurantRevealView: View {
             Text(restaurant.name)
                 .font(AppFonts.heading)
                 .foregroundStyle(AppColors.textPrimary)
-
             Text(restaurant.address)
                 .font(AppFonts.caption)
                 .foregroundStyle(AppColors.textSecondary)
@@ -84,17 +83,10 @@ struct RestaurantRevealView: View {
         HStack(spacing: 16) {
             Label(String(format: "%.1f", restaurant.rating), systemImage: "star.fill")
                 .foregroundStyle(AppColors.star)
-
             Text("·").foregroundStyle(AppColors.textSecondary)
-
-            Text(restaurant.priceDisplay)
-                .foregroundStyle(AppColors.textSecondary)
-
+            Text(restaurant.priceDisplay).foregroundStyle(AppColors.textSecondary)
             Text("·").foregroundStyle(AppColors.textSecondary)
-
-            Text(restaurant.cuisine)
-                .foregroundStyle(AppColors.textSecondary)
-
+            Text(restaurant.cuisine).foregroundStyle(AppColors.textSecondary)
             if !restaurant.distanceDisplay.isEmpty {
                 Text("·").foregroundStyle(AppColors.textSecondary)
                 Text(restaurant.distanceDisplay).foregroundStyle(AppColors.textSecondary)
@@ -105,7 +97,9 @@ struct RestaurantRevealView: View {
 
     private var actionButtons: some View {
         HStack(spacing: 12) {
+            // Directions — also records history
             Button {
+                recordHistory()
                 openInMaps()
             } label: {
                 Label("Directions", systemImage: "map.fill")
@@ -116,19 +110,25 @@ struct RestaurantRevealView: View {
                     .background(AppColors.primary, in: .capsule)
             }
 
+            // Favorite toggle
             Button {
-                // TODO: add to favorites
+                toggleFavorite()
             } label: {
-                Image(systemName: "heart")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(AppColors.primary)
-                    .frame(width: 48, height: 48)
-                    .background(AppColors.primary.opacity(0.12), in: .circle)
+                if favoriteLoading {
+                    ProgressView()
+                        .frame(width: 48, height: 48)
+                } else {
+                    Image(systemName: isFavorited ? "heart.fill" : "heart")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(isFavorited ? AppColors.primary : AppColors.primary)
+                        .frame(width: 48, height: 48)
+                        .background(AppColors.primary.opacity(isFavorited ? 0.2 : 0.12), in: .circle)
+                }
             }
+            .disabled(favoriteLoading || !authManager.isSignedIn)
 
-            Button {
-                shareRestaurant()
-            } label: {
+            // Share
+            Button { shareRestaurant() } label: {
                 Image(systemName: "square.and.arrow.up")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(AppColors.primary)
@@ -139,6 +139,44 @@ struct RestaurantRevealView: View {
     }
 
     // MARK: - Actions
+
+    private func checkFavoriteStatus() async {
+        guard authManager.isSignedIn else { return }
+        do {
+            let favs = try await APIClient.shared.getFavorites()
+            isFavorited = favs.contains { $0.placeID == restaurant.id }
+        } catch {
+            // silently ignore — heart just shows unfilled
+        }
+    }
+
+    private func toggleFavorite() {
+        guard authManager.isSignedIn else { return }
+        favoriteLoading = true
+        Task {
+            defer { favoriteLoading = false }
+            do {
+                if isFavorited {
+                    try await APIClient.shared.deleteFavorite(placeID: restaurant.id)
+                    isFavorited = false
+                } else {
+                    try await APIClient.shared.addFavorite(restaurant)
+                    isFavorited = true
+                }
+            } catch {
+                print("[RestaurantRevealView] favorite error:", error)
+            }
+        }
+    }
+
+    private func recordHistory() {
+        guard authManager.isSignedIn else { return }
+        Task {
+            do { try await APIClient.shared.recordHistory(restaurant) }
+            catch { print("[RestaurantRevealView] history error:", error) }
+        }
+    }
+
     private func openInMaps() {
         let coordinate = CLLocationCoordinate2D(latitude: restaurant.latitude,
                                                 longitude: restaurant.longitude)
@@ -159,4 +197,5 @@ struct RestaurantRevealView: View {
 
 #Preview {
     RestaurantRevealView(restaurant: .mock) {}
+        .environmentObject(AuthManager())
 }

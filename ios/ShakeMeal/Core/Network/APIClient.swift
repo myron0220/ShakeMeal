@@ -13,6 +13,7 @@ final class APIClient {
         self.decoder = JSONDecoder()
         // No keyDecodingStrategy — all models use explicit CodingKeys for snake_case mapping.
         // convertFromSnakeCase conflicts with explicit CodingKeys (transforms keys before matching).
+        self.decoder.dateDecodingStrategy = .iso8601
     }
 
     // MARK: - GET
@@ -34,7 +35,7 @@ final class APIClient {
         }
     }
 
-    // MARK: - POST
+    // MARK: - POST (String body — used for auth)
 
     func post<T: Decodable>(_ path: String, body: [String: String]) async throws -> T {
         let url = try buildURL(path: path, query: [:])
@@ -53,6 +54,85 @@ final class APIClient {
         } catch {
             throw APIError.decodingFailed
         }
+    }
+
+    // MARK: - POST (Any body — used for favorites/history with mixed types)
+
+    func postJSON<T: Decodable>(_ path: String, body: [String: Any]) async throws -> T {
+        let url = try buildURL(path: path, query: [:])
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 15
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        attachAuthHeader(&request)
+
+        let (data, response) = try await perform(request)
+        try validate(response: response, data: data)
+
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            throw APIError.decodingFailed
+        }
+    }
+
+    // MARK: - DELETE
+
+    func delete(_ path: String) async throws {
+        let url = try buildURL(path: path, query: [:])
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.timeoutInterval = 15
+        attachAuthHeader(&request)
+        let (data, response) = try await perform(request)
+        try validate(response: response, data: data)
+    }
+
+    // MARK: - Favorites
+
+    func getFavorites() async throws -> [FavoriteItem] {
+        let response: FavoritesResponse = try await get("/api/v1/favorites")
+        return response.favorites
+    }
+
+    func addFavorite(_ restaurant: Restaurant) async throws {
+        let body: [String: Any] = [
+            "place_id":    restaurant.id,
+            "name":        restaurant.name,
+            "address":     restaurant.address,
+            "cuisine":     restaurant.cuisine,
+            "rating":      restaurant.rating,
+            "price_level": restaurant.priceLevel,
+            "latitude":    restaurant.latitude,
+            "longitude":   restaurant.longitude
+        ]
+        let _: FavoriteItem = try await postJSON("/api/v1/favorites", body: body)
+    }
+
+    func deleteFavorite(placeID: String) async throws {
+        try await delete("/api/v1/favorites/\(placeID)")
+    }
+
+    // MARK: - History
+
+    func getHistory() async throws -> [HistoryItem] {
+        let response: HistoryResponse = try await get("/api/v1/history")
+        return response.history
+    }
+
+    func recordHistory(_ restaurant: Restaurant) async throws {
+        let body: [String: Any] = [
+            "place_id":    restaurant.id,
+            "name":        restaurant.name,
+            "address":     restaurant.address,
+            "cuisine":     restaurant.cuisine,
+            "rating":      restaurant.rating,
+            "price_level": restaurant.priceLevel,
+            "latitude":    restaurant.latitude,
+            "longitude":   restaurant.longitude
+        ]
+        let _: HistoryItem = try await postJSON("/api/v1/history", body: body)
     }
 
     // MARK: - Shake endpoint
@@ -122,7 +202,7 @@ final class APIClient {
     private func validate(response: URLResponse, data: Data) throws {
         guard let http = response as? HTTPURLResponse else { return }
         switch http.statusCode {
-        case 200...299:
+        case 200...299:  // includes 201 Created and 204 No Content
             return
         case 401:
             throw APIError.unauthorized
