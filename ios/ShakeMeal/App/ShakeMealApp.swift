@@ -19,9 +19,6 @@ struct ShakeMealApp: App {
                 .environmentObject(locationManager)
                 .environmentObject(shakeViewModel)
                 .environmentObject(authManager)
-                // Force dark colour scheme app-wide so system elements
-                // (nav bar, tab bar, status bar, sheets) all match the dark palette.
-                .preferredColorScheme(.dark)
         }
     }
 }
