@@ -9,6 +9,9 @@ struct RestaurantRevealView: View {
     @State private var isFavorited = false
     @State private var favoriteLoading = false
     @State private var iconRotation: Double = 0
+    @State private var pressAngle: Double = 0      // accumulates only during press
+    @State private var isPressing: Bool = false
+    @State private var pressTask: Task<Void, Never>? = nil
 
     // Self-contained entry animation.
     // Driven by onAppear so it fires reliably regardless of what the parent
@@ -40,18 +43,50 @@ struct RestaurantRevealView: View {
                         .stroke(AppColors.primary,
                                 style: StrokeStyle(lineWidth: 5, lineCap: .round))
                         .frame(width: 80, height: 80)
-                        .rotationEffect(.degrees(iconRotation))
+                        // pressAngle accumulates raw (no spring); iconRotation uses spring
+                        .rotationEffect(.degrees(iconRotation + pressAngle))
                         .animation(
                             .spring(response: 0.8, dampingFraction: 0.42),
                             value: iconRotation
                         )
                 }
+                // Detect finger-down / finger-up without interfering with the tap action
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { _ in
+                            guard !isPressing else { return }
+                            isPressing = true
+                            pressTask?.cancel()
+                            pressTask = Task { @MainActor in
+                                // ~60°/s → 1° per 16 ms ≈ 1 full rotation every 6 s
+                                while !Task.isCancelled {
+                                    try? await Task.sleep(nanoseconds: 16_666_666)
+                                    guard !Task.isCancelled else { break }
+                                    pressAngle += 1.0
+                                }
+                            }
+                        }
+                        .onEnded { _ in
+                            isPressing = false
+                            pressTask?.cancel()
+                            pressTask = nil
+                            // Fold accumulated press angle into iconRotation with NO
+                            // animation so the displayed angle stays identical.
+                            var tx = Transaction()
+                            tx.disablesAnimations = true
+                            withTransaction(tx) {
+                                iconRotation += pressAngle
+                                pressAngle = 0
+                            }
+                        }
+                )
                 .padding(.top, 16)
                 .padding(.bottom, 48)
                 .task {
                     while !Task.isCancelled {
                         try? await Task.sleep(for: .seconds(Double.random(in: 6.0...12.0)))
-                        guard !Task.isCancelled else { break }
+                        // Skip auto-bounce while the user is holding the ring
+                        guard !Task.isCancelled && !isPressing else { continue }
                         iconRotation += 360
                     }
                 }
