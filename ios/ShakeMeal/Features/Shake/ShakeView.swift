@@ -101,7 +101,7 @@ private struct IdleShakeView: View {
                     .background(AppColors.primary, in: .capsule)
             }
             .padding(.horizontal, 32)
-            .padding(.bottom, 40)
+            .padding(.bottom, 80)
         }
     }
 }
