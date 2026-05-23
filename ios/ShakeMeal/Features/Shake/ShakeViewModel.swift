@@ -47,7 +47,7 @@ final class ShakeViewModel: ObservableObject {
         }
         guard locationManager.currentLocation != nil else {
             locationManager.requestLocation()
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { state = .loading }
+            state = .loading   // animated by ZStack's animation(value:) in ShakeView
             // Retry once location arrives
             locationManager.$currentLocation
                 .compactMap { $0 }
@@ -69,7 +69,7 @@ final class ShakeViewModel: ObservableObject {
     }
 
     func dismiss() {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { state = .idle }
+        state = .idle   // animated by ZStack's animation(value:) in ShakeView
     }
 
     // MARK: - Fetch
@@ -81,7 +81,7 @@ final class ShakeViewModel: ObservableObject {
 
     private func fetchRandomRestaurant() {
         guard let location = locationManager.currentLocation else { return }
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { state = .loading }
+        state = .loading   // animated by ZStack's animation(value:) in ShakeView
         let loadStart = Date()
 
         Task {
@@ -97,15 +97,16 @@ final class ShakeViewModel: ObservableObject {
                 if remaining > 0 {
                     try await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
                 }
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-                    state = .result(restaurant)
-                }
+                // Plain assignment — withAnimation inside async Task is unreliable
+                // and can be overridden by the dice timer's own animation transaction,
+                // causing the card to flash in instead of sliding up.
+                state = .result(restaurant)
             } catch APIError.noRestaurantsFound {
-                withAnimation { state = .error("No restaurants found nearby.\nTry increasing your search radius.") }
+                state = .error("No restaurants found nearby.\nTry increasing your search radius.")
             } catch APIError.networkUnavailable {
-                withAnimation { state = .error("No internet connection.\nPlease check your network and try again.") }
+                state = .error("No internet connection.\nPlease check your network and try again.")
             } catch {
-                withAnimation { state = .error(error.localizedDescription) }
+                state = .error(error.localizedDescription)
             }
         }
     }

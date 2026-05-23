@@ -29,7 +29,7 @@ struct ShakeView: View {
                         viewModel.shakeAgain()
                     }
                     .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .move(edge: .bottom)),
+                        insertion: .move(edge: .bottom),
                         removal: .opacity
                     ))
 
@@ -38,6 +38,10 @@ struct ShakeView: View {
                         .transition(.opacity)
                 }
             }
+            // Declarative animation: fires on every state change regardless of where
+            // the mutation originates (async Task, gesture, timer). This is more
+            // reliable than withAnimation() calls inside the ViewModel.
+            .animation(.spring(response: 0.45, dampingFraction: 0.78), value: viewModel.state)
             .navigationTitle("ShakeMeal")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -124,11 +128,12 @@ private final class DiceRollModel: ObservableObject {
             .autoconnect()
             .sink { [weak self] _ in
                 guard let self else { return }
-                withAnimation(.interpolatingSpring(stiffness: 280, damping: 14)) {
-                    self.faceIndex = (self.faceIndex + 1) % self.faces.count
-                    self.rotation += 60
-                    self.scale = self.scale == 1.0 ? 1.18 : 1.0
-                }
+                // No withAnimation here — animations are defined at the view layer
+                // via .animation(value:) so they never pollute the outer ZStack's
+                // transition transaction (which caused the probabilistic flash).
+                self.faceIndex = (self.faceIndex + 1) % self.faces.count
+                self.rotation += 60
+                self.scale = self.scale == 1.0 ? 1.18 : 1.0
             }
     }
 
@@ -151,7 +156,9 @@ private struct ShakeLoadingView: View {
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(AppColors.primary)
                 .rotationEffect(.degrees(model.rotation))
+                .animation(.interpolatingSpring(stiffness: 280, damping: 14), value: model.rotation)
                 .scaleEffect(model.scale)
+                .animation(.interpolatingSpring(stiffness: 280, damping: 14), value: model.scale)
                 .contentTransition(.identity)   // prevents SwiftUI cross-fade on symbol change
                 .onAppear  { model.start() }
                 .onDisappear { model.stop() }
