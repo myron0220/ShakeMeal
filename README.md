@@ -282,9 +282,9 @@ xcrun simctl launch booted com.shakemeal.app
 - Menu: **Device → Shake**
 - Or tap the **Shake Now** button on screen
 
-> **Note:** The app targets `localhost:8080` in DEBUG builds. Start the backend first if you want live API calls; the app works with mock data even without it.
+> **Note:** The app always points to `https://shakemeal-api.fly.dev` (Fly.io). To develop locally, change `AppConfig.baseURL` in `ios/ShakeMeal/Core/Config/AppConfig.swift` to `http://localhost:8080`.
 >
-> Before submitting to the App Store, add your Apple Team ID to `ios/project.yml`.
+> Apple Team ID is already set in `ios/project.yml` for real-device builds.
 
 ---
 
@@ -433,24 +433,32 @@ make migrate-reset # drop all tables (destructive)
 | iOS — Nav bar dedicated area | ✅ Done | Removed `ignoresSafeArea` — title + filter icon no longer overlap the photo |
 | iOS — Shake Again button redesign | ✅ Done | Large circular icon-only button (88pt), no text |
 | iOS — Shake Again idle animation | ✅ Done | Auto-spins 720° every 3–6s with spring bounce (response:1.4, dampingFraction:0.6) |
-| Deploy backend to Railway / Fly.io | 🔜 Next | |
+| iOS — Custom tab bar | ✅ Done | Spring scale bounce (1.3×) + light haptic on tap; `safeAreaInset` layout — no overlap with content |
+| iOS — Real device testing | ✅ Done | Team ID set in `project.yml`; Sign in with Apple removed from entitlements for Personal Team |
+| iOS — Restaurant card slide-up animation | ✅ Done | `onAppear`-driven spring (guaranteed to fire); content layer clipped so spring overshoot can't cover nav bar |
+| iOS — Real-time location in nav bar | ✅ Done | `CLGeocoder` reverse-geocodes on every location update; shows "Near you / 📍 3900 Confederation Pkwy" top-left; falls back to "ShakeMeal" when permission denied |
+| iOS — Favorites + History capped at 3 items | ✅ Done | `Array.prefix(3)` in `ProfileView` |
+| Backend — Deployed to Fly.io | ✅ Done | `https://shakemeal-api.fly.dev`; auto-migrates on startup; `shared-cpu-1x` / 256 MB |
+| Backend — Mock data: real Mississauga restaurants | ✅ Done | 5 real restaurants near 3900 Confederation Pkwy (Kinton Ramen, Osmow's, Moxies, Scaddabush, Gyubee) with Unsplash photos |
+| iOS — StoreKit 2 Paywall | 🔜 Pending | |
 
 ---
 
 ## Stable Baseline
 
-The current `main` HEAD is the stable baseline for UI work.
+Current baseline: **`82243f3`** — all features below verified working on real device (iPhone, iOS 17).
 
-> **To roll back here if UI polish breaks things:**
+- Shake → restaurant reveal (guaranteed spring slide-up, no flash, nav bar never covered)
+- Real-time location address in nav bar (CLGeocoder, top-left, truncates at 1/3 screen width)
+- Custom tab bar (spring bounce, haptic)
+- Favorites + history (3-item cap in ProfileView)
+- Backend on Fly.io, auto-migrates on startup
+- Mock data: 5 real Mississauga restaurants with Unsplash photos
+
+> **To roll back here (destructive — confirm before running):**
 > ```bash
-> # Find the commit hash
-> git log --oneline -1
->
-> # Hard reset (destructive — discards all uncommitted changes)
-> git reset --hard <commit-hash>
+> git reset --hard 82243f3
 > git push --force origin main
->
-> # Regenerate xcodeproj after reset (xcodeproj is gitignored)
 > cd ios && xcodegen generate
 > ```
 
