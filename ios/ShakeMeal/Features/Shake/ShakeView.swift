@@ -91,8 +91,8 @@ struct ShakeView: View {
                         .truncationMode(.tail)
                 }
             }
-            // Cap width so long addresses truncate instead of pushing the filter button
-            .frame(maxWidth: 220, alignment: .leading)
+            // Cap at ~1/3 of screen width so long addresses truncate cleanly
+            .frame(maxWidth: UIScreen.main.bounds.width / 3, alignment: .leading)
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
         } else if locationManager.hasPermission {
             // Permission granted but geocode not yet ready
