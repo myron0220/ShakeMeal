@@ -48,3 +48,4 @@ ios/ShakeMeal.xcodeproj/
 
 # macOS
 .DS_Store
+backend/server
