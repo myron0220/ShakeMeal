@@ -282,7 +282,8 @@ xcrun simctl launch booted com.shakemeal.app
 - Menu: **Device → Shake**
 - Or tap the **Shake Now** button on screen
 
-> **Note:** The app always points to `https://shakemeal-api.fly.dev` (Fly.io). To develop locally, change `AppConfig.baseURL` in `ios/ShakeMeal/Core/Config/AppConfig.swift` to `http://localhost:8080`.
+> **Note:** `AppConfig.swift` currently points to `http://localhost:8080` for local dev.
+> To switch to production, change `baseURL` to `https://shakemeal-api.fly.dev`.
 >
 > Apple Team ID is already set in `ios/project.yml` for real-device builds.
 
@@ -438,7 +439,8 @@ make migrate-reset # drop all tables (destructive)
 | iOS — Restaurant card slide-up animation | ✅ Done | `onAppear`-driven spring (guaranteed to fire); content layer clipped so spring overshoot can't cover nav bar |
 | iOS — Real-time location in nav bar | ✅ Done | `CLGeocoder` reverse-geocodes on every location update; shows "Near you / 📍 3900 Confederation Pkwy" top-left; falls back to "ShakeMeal" when permission denied |
 | iOS — Favorites + History capped at 3 items | ✅ Done | `Array.prefix(3)` in `ProfileView` |
-| Backend — Deployed to Fly.io | ✅ Done | `https://shakemeal-api.fly.dev`; auto-migrates on startup; `shared-cpu-1x` / 256 MB |
+| Backend — Deployed to Fly.io | ⚠️ Trial ended | Free trial expired; needs credit card or migration to Neon/Supabase |
+| Backend — Viper BindEnv fix | ✅ Done | `AutomaticEnv()` + `Unmarshal()` don't work together; explicit `BindEnv` calls added for all keys |
 | Backend — Mock data: real Mississauga restaurants | ✅ Done | 5 real restaurants near 3900 Confederation Pkwy (Kinton Ramen, Osmow's, Moxies, Scaddabush, Gyubee) with Unsplash photos |
 | iOS — StoreKit 2 Paywall | 🔜 Pending | |
 
@@ -446,21 +448,21 @@ make migrate-reset # drop all tables (destructive)
 
 ## Stable Baseline
 
-Current baseline: **`82243f3`** — all features below verified working on real device (iPhone, iOS 17).
+Current baseline: **`252e26d`** — all features verified working locally (MacBook Pro, simulator + real device).
 
 - Shake → restaurant reveal (guaranteed spring slide-up, no flash, nav bar never covered)
-- Real-time location address in nav bar (CLGeocoder, top-left, truncates at 1/3 screen width)
-- Custom tab bar (spring bounce, haptic)
+- Real-time location in nav bar top-left (CLGeocoder, 1/3 screen width, truncates cleanly)
+- Custom tab bar (spring bounce + haptic, safeAreaInset)
 - Favorites + history (3-item cap in ProfileView)
-- Backend on Fly.io, auto-migrates on startup
 - Mock data: 5 real Mississauga restaurants with Unsplash photos
+- Backend: local `go run ./cmd/server` with mock provider (no DB or API key needed for basic shake)
+- Backend: Viper BindEnv fix — all env vars correctly loaded from Fly.io secrets / `.env`
+- AppConfig → `http://localhost:8080` (local dev mode)
 
-> **To roll back here (destructive — confirm before running):**
-> ```bash
-> git reset --hard 82243f3
-> git push --force origin main
-> cd ios && xcodegen generate
-> ```
+> **To revert here:** `git revert <commits>` — see project memory for details.
+>
+> **To switch back to production:** change `AppConfig.baseURL` → `https://shakemeal-api.fly.dev`  
+> and add a credit card to Fly.io or migrate Postgres to Neon/Supabase.
 
 ---
 
