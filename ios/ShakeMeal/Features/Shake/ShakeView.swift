@@ -100,13 +100,13 @@ private struct ShakeHeaderBar: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(AppColors.primary)
                     Text(name)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(AppColors.textPrimary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
             }
-            .frame(maxWidth: UIScreen.main.bounds.width / 2.2, alignment: .leading)
+            .frame(maxWidth: UIScreen.main.bounds.width / 3, alignment: .leading)
             .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .leading)))
         } else if locationManager.hasPermission {
             VStack(alignment: .leading, spacing: 3) {
@@ -114,7 +114,7 @@ private struct ShakeHeaderBar: View {
                     .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(AppColors.textSecondary)
                 Text("Locating…")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(AppColors.textSecondary)
             }
             .transition(.opacity)
