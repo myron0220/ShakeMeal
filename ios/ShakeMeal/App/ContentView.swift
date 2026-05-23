@@ -38,8 +38,7 @@ private struct CustomTabBar: View {
                 isSelected: selectedTab == 1
             ) { selectedTab = 1 }
         }
-        .padding(.top, 6)
-        .padding(.bottom, 2)
+        .padding(.vertical, 5)
         .background {
             Rectangle()
                 .fill(.ultraThinMaterial)
@@ -70,11 +69,11 @@ private struct TabBarButton: View {
             }
             action()
         } label: {
-            VStack(spacing: 4) {
+            VStack(spacing: 2) {
                 Image(systemName: icon)
-                    .font(.system(size: 24))
+                    .font(.system(size: 16))
                 Text(label)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 8, weight: .medium))
             }
             .foregroundStyle(isSelected ? AppColors.primary : AppColors.textSecondary)
             .scaleEffect(scale)

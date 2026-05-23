@@ -35,20 +35,24 @@ struct RestaurantRevealView: View {
                     SoundPlayer.click()
                     onShakeAgain()
                 } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 36, weight: .semibold))
-                        .foregroundStyle(AppColors.primary)
+                    Circle()
+                        .trim(from: 0.0, to: 0.9382)
+                        .stroke(AppColors.primary,
+                                style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                        .frame(width: 80, height: 80)
                         .rotationEffect(.degrees(iconRotation))
-                        .animation(.spring(response: 1.4, dampingFraction: 0.6), value: iconRotation)
-                        .frame(width: 88, height: 88)
-                        .background(AppColors.primary.opacity(0.12), in: .circle)
+                        .animation(
+                            .spring(response: 0.8, dampingFraction: 0.42),
+                            value: iconRotation
+                        )
                 }
-                .padding(.bottom, 32)
+                .padding(.top, 16)
+                .padding(.bottom, 48)
                 .task {
                     while !Task.isCancelled {
-                        try? await Task.sleep(for: .seconds(Double.random(in: 3...6)))
+                        try? await Task.sleep(for: .seconds(Double.random(in: 6.0...12.0)))
                         guard !Task.isCancelled else { break }
-                        iconRotation += 720
+                        iconRotation += 360
                     }
                 }
             }
@@ -134,12 +138,12 @@ struct RestaurantRevealView: View {
             Button {
                 openInMaps()
             } label: {
-                Label("Directions", systemImage: "map.fill")
+                Image(systemName: "map.fill")
                     .font(AppFonts.button)
-                    .foregroundStyle(Color(red: 0.35, green: 0.78, blue: 1.0))
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(.white, in: .capsule)
+                    .background(AppColors.primary, in: .capsule)
             }
 
             // Favorite toggle
