@@ -9,95 +9,54 @@ struct RestaurantRevealView: View {
     @State private var isFavorited = false
     @State private var favoriteLoading = false
     @State private var iconRotation: Double = 0
-    @State private var pressAngle: Double = 0      // accumulates only during press
+    @State private var pressAngle: Double = 0
     @State private var isPressing: Bool = false
     @State private var pressTask: Task<Void, Never>? = nil
 
-    // Self-contained entry animation.
-    // Driven by onAppear so it fires reliably regardless of what the parent
-    // ZStack animation context is doing. The view starts off-screen (y+600,
-    // transparent) and springs into place when it first appears.
     @State private var slideOffset: CGFloat = 600
     @State private var slideOpacity: Double = 0
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                photoHeader
+        GeometryReader { geo in
+            ZStack {
+                // ── 1. Full-screen photo background ───────────────────────
+                photoBackground
+                    .frame(width: geo.size.width, height: geo.size.height)
 
-                VStack(alignment: .leading, spacing: 20) {
-                    nameSection
-                    metaRow
-                    Divider()
-                    actionButtons
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 24)
-
-                Button {
-                    SoundPlayer.click()
-                    onShakeAgain()
-                } label: {
-                    Circle()
-                        .trim(from: 0.0, to: 0.9382)
-                        .stroke(AppColors.primary,
-                                style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                        .frame(width: 80, height: 80)
-                        // pressAngle accumulates raw (no spring); iconRotation uses spring
-                        .rotationEffect(.degrees(iconRotation + pressAngle))
-                        .animation(
-                            .spring(response: 0.8, dampingFraction: 0.42),
-                            value: iconRotation
-                        )
-                }
-                // Detect finger-down / finger-up without interfering with the tap action
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { _ in
-                            guard !isPressing else { return }
-                            isPressing = true
-                            pressTask?.cancel()
-                            pressTask = Task { @MainActor in
-                                // ~60°/s → 1° per 16 ms ≈ 1 full rotation every 6 s
-                                while !Task.isCancelled {
-                                    try? await Task.sleep(nanoseconds: 16_666_666)
-                                    guard !Task.isCancelled else { break }
-                                    pressAngle += 1.0
-                                }
-                            }
-                        }
-                        .onEnded { _ in
-                            isPressing = false
-                            pressTask?.cancel()
-                            pressTask = nil
-                            // Fold accumulated press angle into iconRotation with NO
-                            // animation so the displayed angle stays identical.
-                            var tx = Transaction()
-                            tx.disablesAnimations = true
-                            withTransaction(tx) {
-                                iconRotation += pressAngle
-                                pressAngle = 0
-                            }
-                        }
+                // ── 2. Dark gradient overlay ──────────────────────────────
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.88)],
+                    startPoint: .init(x: 0.5, y: 0.3),
+                    endPoint: .bottom
                 )
-                .padding(.top, 16)
-                .padding(.bottom, 48)
-                .task {
-                    while !Task.isCancelled {
-                        try? await Task.sleep(for: .seconds(Double.random(in: 6.0...12.0)))
-                        // Skip auto-bounce while the user is holding the ring
-                        guard !Task.isCancelled && !isPressing else { continue }
-                        iconRotation += 360
+                .frame(width: geo.size.width, height: geo.size.height)
+                .allowsHitTesting(false)
+
+                // ── 3. Content: info (bottom-left) + actions (bottom-right)
+                VStack(spacing: 0) {
+                    Spacer()
+
+                    HStack(alignment: .bottom, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            nameSection
+                            metaRow
+                        }
+                        Spacer(minLength: 0)
+                        actionColumn
                     }
+                    .frame(width: geo.size.width - 40)  // explicit: screen - 20pt each side
+                    .padding(.bottom, 24)
+
+                    // Shake-again ring centred
+                    shakeAgainButton
+                        .padding(.bottom, 56)
                 }
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .bottom)
             }
         }
-        .background(.white)
         .offset(y: slideOffset)
         .opacity(slideOpacity)
         .onAppear {
-            // withAnimation inside onAppear is 100 % reliable — the view is
-            // already mounted when this fires, so the animation context is stable.
             withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
                 slideOffset  = 0
                 slideOpacity = 1
@@ -105,30 +64,35 @@ struct RestaurantRevealView: View {
         }
         .task {
             await checkFavoriteStatus()
-            recordHistory()   // record every shake result automatically
+            recordHistory()
         }
     }
 
-    // MARK: - Sub-views
+    // MARK: - Photo background
 
-    private var photoHeader: some View {
-        ZStack(alignment: .bottom) {
+    private var photoBackground: some View {
+        Group {
             if let url = restaurant.photoURL {
-                AsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity, minHeight: 280, maxHeight: 280)
-                        .clipped()
-                } placeholder: {
-                    placeholderGradient
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    default:
+                        placeholderGradient
+                    }
                 }
+                // ⚠️ Frame MUST be on AsyncImage itself — without it the view
+                // reports the image's native pixel size (e.g. 800 px wide) and
+                // inflates the ZStack, pushing all overlay content off-screen.
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
             } else {
                 placeholderGradient
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 280, maxHeight: 280)
-        .clipped()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var placeholderGradient: some View {
@@ -140,60 +104,60 @@ struct RestaurantRevealView: View {
         .overlay { Text("🍽️").font(.system(size: 72)) }
     }
 
+    // MARK: - Info (bottom-left)
+
     private var nameSection: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(restaurant.name)
                 .font(AppFonts.heading)
-                .foregroundStyle(AppColors.textPrimary)
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.55), radius: 6, x: 0, y: 2)
+                .overlay(alignment: .topTrailing) {
+                    if restaurant.isOpen == true {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 3, height: 3)
+                            .shadow(color: .black.opacity(0.35), radius: 2)
+                            .offset(x: 10, y: 5)
+                    }
+                }
             Text(restaurant.address)
                 .font(AppFonts.caption)
-                .foregroundStyle(AppColors.textSecondary)
+                .foregroundStyle(.white.opacity(0.85))
+                .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 1)
         }
     }
 
     private var metaRow: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 8) {
             Label(String(format: "%.1f", restaurant.rating), systemImage: "star.fill")
-                .foregroundStyle(AppColors.star)
-            Text("·").foregroundStyle(AppColors.textSecondary)
-            Text(restaurant.priceDisplay).foregroundStyle(AppColors.textSecondary)
-            Text("·").foregroundStyle(AppColors.textSecondary)
-            Text(restaurant.cuisine).foregroundStyle(AppColors.textSecondary)
+                .foregroundStyle(.white)
+            Text("·").foregroundStyle(.white.opacity(0.6))
+            Text(restaurant.priceDisplay).foregroundStyle(.white.opacity(0.9))
+            Text("·").foregroundStyle(.white.opacity(0.6))
+            Text(restaurant.cuisine).foregroundStyle(.white.opacity(0.9))
             if !restaurant.distanceDisplay.isEmpty {
-                Text("·").foregroundStyle(AppColors.textSecondary)
-                Text(restaurant.distanceDisplay).foregroundStyle(AppColors.textSecondary)
+                Text("·").foregroundStyle(.white.opacity(0.6))
+                Text(restaurant.distanceDisplay).foregroundStyle(.white.opacity(0.9))
             }
         }
         .font(AppFonts.meta)
+        .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 1)
     }
 
-    private var actionButtons: some View {
-        HStack(spacing: 12) {
-            // Directions
-            Button {
-                openInMaps()
-            } label: {
-                Image(systemName: "map.fill")
-                    .font(AppFonts.button)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(AppColors.primary, in: .capsule)
-            }
+    // MARK: - Action column (bottom-right, TikTok style)
 
-            // Favorite toggle
-            Button {
-                toggleFavorite()
-            } label: {
+    private var actionColumn: some View {
+        VStack(spacing: 28) {
+            // Favorite
+            Button { toggleFavorite() } label: {
                 if favoriteLoading {
-                    ProgressView()
-                        .frame(width: 48, height: 48)
+                    ProgressView().tint(.white).frame(width: 30, height: 30)
                 } else {
                     Image(systemName: isFavorited ? "heart.fill" : "heart")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(isFavorited ? AppColors.primary : AppColors.primary)
-                        .frame(width: 48, height: 48)
-                        .background(AppColors.primary.opacity(isFavorited ? 0.2 : 0.12), in: .circle)
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(isFavorited ? Color.red : .white)
+                        .shadow(color: .black.opacity(0.45), radius: 5)
                 }
             }
             .disabled(favoriteLoading || !authManager.isSignedIn)
@@ -201,10 +165,71 @@ struct RestaurantRevealView: View {
             // Share
             Button { shareRestaurant() } label: {
                 Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(AppColors.primary)
-                    .frame(width: 48, height: 48)
-                    .background(AppColors.primary.opacity(0.12), in: .circle)
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.45), radius: 5)
+            }
+
+            // Directions
+            Button { openInMaps() } label: {
+                Image(systemName: "map.fill")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.45), radius: 5)
+            }
+        }
+    }
+
+    // MARK: - Shake-again ring
+
+    private var shakeAgainButton: some View {
+        Button {
+            SoundPlayer.click()
+            onShakeAgain()
+        } label: {
+            Circle()
+                .trim(from: 0.0, to: 0.9382)
+                .stroke(.white,
+                        style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                .shadow(color: .black.opacity(0.45), radius: 6)
+                .frame(width: 80, height: 80)
+                .rotationEffect(.degrees(iconRotation + pressAngle))
+                .animation(
+                    .spring(response: 0.8, dampingFraction: 0.42),
+                    value: iconRotation
+                )
+        }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    guard !isPressing else { return }
+                    isPressing = true
+                    pressTask?.cancel()
+                    pressTask = Task { @MainActor in
+                        while !Task.isCancelled {
+                            try? await Task.sleep(nanoseconds: 16_666_666)
+                            guard !Task.isCancelled else { break }
+                            pressAngle += 1.0
+                        }
+                    }
+                }
+                .onEnded { _ in
+                    isPressing = false
+                    pressTask?.cancel()
+                    pressTask = nil
+                    var tx = Transaction()
+                    tx.disablesAnimations = true
+                    withTransaction(tx) {
+                        iconRotation += pressAngle
+                        pressAngle = 0
+                    }
+                }
+        )
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(Double.random(in: 6.0...12.0)))
+                guard !Task.isCancelled && !isPressing else { continue }
+                iconRotation += 360
             }
         }
     }
@@ -216,9 +241,7 @@ struct RestaurantRevealView: View {
         do {
             let favs = try await APIClient.shared.getFavorites()
             isFavorited = favs.contains { $0.placeID == restaurant.id }
-        } catch {
-            // silently ignore — heart just shows unfilled
-        }
+        } catch {}
     }
 
     private func toggleFavorite() {
