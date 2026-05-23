@@ -46,78 +46,95 @@ struct ShakeView: View {
                 }
                 .clipped()
             }
-            // Declarative animation: fires on every state change regardless of where
-            // the mutation originates (async Task, gesture, timer). This is more
-            // reliable than withAnimation() calls inside the ViewModel.
             .animation(.spring(response: 0.45, dampingFraction: 0.78), value: viewModel.state)
-            .navigationBarTitleDisplayMode(.inline)
-            .animation(.easeInOut(duration: 0.3), value: locationManager.placeName)
-            .toolbar {
-                // ── Location header (leading) ───────────────────────────────
-                ToolbarItem(placement: .topBarLeading) {
-                    locationTitle
-                }
-                // ── Filter (trailing) ───────────────────────────────────────
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        viewModel.isFilterPresented = true
-                    } label: {
-                        Image(systemName: "slider.horizontal.3")
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(viewModel.filter.isDefault
-                                             ? AppColors.textSecondary
-                                             : AppColors.primary)
-                    }
-                }
+            .toolbar(.hidden, for: .navigationBar)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                ShakeHeaderBar(
+                    locationManager: locationManager,
+                    filterIsDefault: viewModel.filter.isDefault,
+                    onFilterTap: { viewModel.isFilterPresented = true }
+                )
             }
             .sheet(isPresented: $viewModel.isFilterPresented) {
                 FilterView(filter: $viewModel.filter)
             }
         }
     }
+}
 
-    // MARK: - Location title
+// MARK: - Custom top bar
+
+private struct ShakeHeaderBar: View {
+    let locationManager: LocationManager
+    let filterIsDefault: Bool
+    let onFilterTap: () -> Void
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 0) {
+            locationBlock
+            Spacer()
+            filterButton
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .background {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .ignoresSafeArea(edges: .top)
+        }
+        .overlay(alignment: .bottom) { Divider() }
+        .animation(.easeInOut(duration: 0.3), value: locationManager.placeName)
+    }
+
+    // MARK: Location
 
     @ViewBuilder
-    private var locationTitle: some View {
+    private var locationBlock: some View {
         if let name = locationManager.placeName {
-            // Has address — show "Near you" + street, both left-aligned
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text("Near you")
-                    .font(.system(size: 11, weight: .regular))
+                    .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(AppColors.textSecondary)
-
-                HStack(spacing: 3) {
+                HStack(spacing: 4) {
                     Image(systemName: "location.fill")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(AppColors.primary)
                     Text(name)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(AppColors.textPrimary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
             }
-            // Cap at ~1/3 of screen width so long addresses truncate cleanly
-            .frame(maxWidth: UIScreen.main.bounds.width / 3, alignment: .leading)
-            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            .frame(maxWidth: UIScreen.main.bounds.width / 2.2, alignment: .leading)
+            .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .leading)))
         } else if locationManager.hasPermission {
-            // Permission granted but geocode not yet ready
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text("Near you")
-                    .font(.system(size: 11, weight: .regular))
+                    .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(AppColors.textSecondary)
                 Text("Locating…")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(AppColors.textSecondary)
             }
             .transition(.opacity)
         } else {
-            // No permission — plain app name
             Text("ShakeMeal")
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(AppColors.textPrimary)
                 .transition(.opacity)
+        }
+    }
+
+    // MARK: Filter button
+
+    private var filterButton: some View {
+        Button(action: onFilterTap) {
+            Image(systemName: "slider.horizontal.3")
+                .symbolRenderingMode(.hierarchical)
+                .font(.system(size: 20))
+                .foregroundStyle(filterIsDefault ? AppColors.textSecondary : AppColors.primary)
+                .frame(width: 44, height: 44)
         }
     }
 }
