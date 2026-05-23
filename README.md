@@ -448,16 +448,16 @@ make migrate-reset # drop all tables (destructive)
 
 ## Stable Baseline
 
-Current baseline: **`26be0cc`** — restaurant card redesign, verified on simulator.
+Current baseline: **`1a1dba3`** — iterative UI polish, verified on simulator.
 
 - Restaurant info: flat section below photo (no card/rounded rect), white page background
-- Directions button: systemGray6 background, sky-blue text
+- Shake-again: arc ring (6.18% gap, 80pt, round linecap), occasional spring-bounce rotation every 6–12s
+- Tab bar: compact (icon 16pt, label 8pt, 5pt vertical padding)
 - Shake → restaurant reveal (guaranteed spring slide-up, no flash, nav bar never covered)
 - Real-time location in nav bar top-left (CLGeocoder, 1/3 screen width, truncates cleanly)
-- Custom tab bar (spring bounce + haptic, safeAreaInset)
 - Favorites + history (3-item cap in ProfileView)
 - Mock data: 5 real Mississauga restaurants with Unsplash photos
-- Backend: local `go run ./cmd/server` with mock provider (no DB or API key needed for basic shake)
+- Backend: local `go run ./cmd/server` with mock provider
 - AppConfig → `http://localhost:8080` (local dev mode)
 
 > **To revert here:** `git revert <commits>` — see project memory for details.
