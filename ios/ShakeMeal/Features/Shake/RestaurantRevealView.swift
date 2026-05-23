@@ -40,7 +40,6 @@ struct RestaurantRevealView: View {
                 .padding(.bottom, 32)
             }
         }
-        .ignoresSafeArea(edges: .top)
         .task {
             await checkFavoriteStatus()
             recordHistory()   // record every shake result automatically
