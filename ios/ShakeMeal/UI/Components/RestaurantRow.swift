@@ -6,14 +6,17 @@ struct RestaurantRow: View {
     var body: some View {
         HStack(spacing: 12) {
             // Thumbnail
-            AsyncImage(url: restaurant.photoURL) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                AppColors.primary.opacity(0.15)
-                    .overlay { Text("🍽️") }
+            AsyncImage(url: restaurant.photoURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFill()
+                default:
+                    AppColors.surfaceHigh
+                        .overlay { Text("🍽️").font(.system(size: 20)).opacity(0.5) }
+                }
             }
-            .frame(width: 56, height: 56)
-            .clipShape(.rect(cornerRadius: 10))
+            .frame(width: 52, height: 52)
+            .clipShape(.rect(cornerRadius: 8))
 
             // Info
             VStack(alignment: .leading, spacing: 3) {
@@ -26,18 +29,23 @@ struct RestaurantRow: View {
                     .foregroundStyle(AppColors.textSecondary)
 
                 HStack(spacing: 6) {
-                    Label(String(format: "%.1f", restaurant.rating), systemImage: "star.fill")
-                        .foregroundStyle(AppColors.star)
-                        .font(AppFonts.meta)
+                    HStack(spacing: 3) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(AppColors.star)
+                        Text(String(format: "%.1f", restaurant.rating))
+                            .font(AppFonts.meta)
+                            .foregroundStyle(AppColors.textPrimary)
+                    }
 
-                    Text("·").foregroundStyle(AppColors.textSecondary)
+                    Text("·").foregroundStyle(AppColors.textTertiary)
 
                     Text(restaurant.priceDisplay)
                         .font(AppFonts.meta)
                         .foregroundStyle(AppColors.textSecondary)
 
                     if !restaurant.distanceDisplay.isEmpty {
-                        Text("·").foregroundStyle(AppColors.textSecondary)
+                        Text("·").foregroundStyle(AppColors.textTertiary)
                         Text(restaurant.distanceDisplay)
                             .font(AppFonts.meta)
                             .foregroundStyle(AppColors.textSecondary)
@@ -54,4 +62,5 @@ struct RestaurantRow: View {
 #Preview {
     RestaurantRow(restaurant: .mock)
         .padding()
+        .background(AppColors.surface)
 }

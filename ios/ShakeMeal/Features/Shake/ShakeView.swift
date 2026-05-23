@@ -8,35 +8,31 @@ struct ShakeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background layer — intentionally escapes safe areas so the
-                // screen edges are filled even on notched / Dynamic Island devices.
+                // Background layer — escapes safe areas so screen edges are filled.
                 AppColors.background.ignoresSafeArea()
 
-                // Content layer — clipped so the spring bounce on RestaurantRevealView
-                // cannot visually overflow into the navigation bar above.
+                // Content layer — clipped so spring-bounce on RestaurantRevealView
+                // cannot overflow into the navigation bar above.
                 ZStack {
                     switch viewModel.state {
                     case .idle:
                         IdleShakeView { viewModel.shake() }
                             .transition(.asymmetric(
                                 insertion: .opacity,
-                                removal: .opacity.combined(with: .scale(scale: 0.95))
+                                removal:   .opacity.combined(with: .scale(scale: 0.95))
                             ))
 
                     case .loading:
                         ShakeLoadingView()
                             .transition(.asymmetric(
                                 insertion: .opacity.combined(with: .scale(scale: 0.85)),
-                                removal: .opacity.combined(with: .scale(scale: 1.1))
+                                removal:   .opacity.combined(with: .scale(scale: 1.1))
                             ))
 
                     case .result(let restaurant):
                         RestaurantRevealView(restaurant: restaurant) {
                             viewModel.shakeAgain()
                         }
-                        // No .transition here — RestaurantRevealView drives its own
-                        // entry animation via onAppear so the slide-up is guaranteed
-                        // to fire even when ZStack's animation context is unreliable.
                         .transition(.opacity.animation(.easeOut(duration: 0.1)))
 
                     case .error(let message):
@@ -46,18 +42,17 @@ struct ShakeView: View {
                 }
                 .clipped()
             }
-            // Declarative animation: fires on every state change regardless of where
-            // the mutation originates (async Task, gesture, timer). This is more
-            // reliable than withAnimation() calls inside the ViewModel.
             .animation(.spring(response: 0.45, dampingFraction: 0.78), value: viewModel.state)
             .navigationBarTitleDisplayMode(.inline)
+            // Transparent nav bar so the dark background bleeds through seamlessly
+            .toolbarBackground(.hidden, for: .navigationBar)
             .animation(.easeInOut(duration: 0.3), value: locationManager.placeName)
             .toolbar {
-                // ── Location header (leading) ───────────────────────────────
+                // ── Location header (leading) ────────────────────────
                 ToolbarItem(placement: .topBarLeading) {
                     locationTitle
                 }
-                // ── Filter (trailing) ───────────────────────────────────────
+                // ── Filter (trailing) ────────────────────────────────
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         viewModel.isFilterPresented = true
@@ -66,7 +61,7 @@ struct ShakeView: View {
                             .symbolRenderingMode(.hierarchical)
                             .foregroundStyle(viewModel.filter.isDefault
                                              ? AppColors.textSecondary
-                                             : AppColors.primary)
+                                             : AppColors.accent)
                     }
                 }
             }
@@ -81,16 +76,14 @@ struct ShakeView: View {
     @ViewBuilder
     private var locationTitle: some View {
         if let name = locationManager.placeName {
-            // Has address — show "Near you" + street, both left-aligned
             VStack(alignment: .leading, spacing: 1) {
                 Text("Near you")
                     .font(.system(size: 11, weight: .regular))
                     .foregroundStyle(AppColors.textSecondary)
-
                 HStack(spacing: 3) {
                     Image(systemName: "location.fill")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(AppColors.primary)
+                        .foregroundStyle(AppColors.accent)
                     Text(name)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(AppColors.textPrimary)
@@ -98,11 +91,10 @@ struct ShakeView: View {
                         .truncationMode(.tail)
                 }
             }
-            // Cap at ~1/3 of screen width so long addresses truncate cleanly
             .frame(maxWidth: UIScreen.main.bounds.width / 3, alignment: .leading)
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
+
         } else if locationManager.hasPermission {
-            // Permission granted but geocode not yet ready
             VStack(alignment: .leading, spacing: 1) {
                 Text("Near you")
                     .font(.system(size: 11, weight: .regular))
@@ -112,8 +104,8 @@ struct ShakeView: View {
                     .foregroundStyle(AppColors.textSecondary)
             }
             .transition(.opacity)
+
         } else {
-            // No permission — plain app name
             Text("ShakeMeal")
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(AppColors.textPrimary)
@@ -123,6 +115,7 @@ struct ShakeView: View {
 }
 
 // MARK: - Idle State
+
 private struct IdleShakeView: View {
     let onShake: () -> Void
     @State private var isAnimating = false
@@ -131,46 +124,51 @@ private struct IdleShakeView: View {
         VStack(spacing: 32) {
             Spacer()
 
+            // Emoji with gentle breath + subtle white glow
             Text("🍜")
-                .font(.system(size: 80))
-                .scaleEffect(isAnimating ? 1.1 : 1.0)
-                .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true),
-                           value: isAnimating)
+                .font(.system(size: 96))
+                .shadow(color: .white.opacity(0.12), radius: 24)
+                .scaleEffect(isAnimating ? 1.08 : 1.0)
+                .animation(
+                    .easeInOut(duration: 1.4).repeatForever(autoreverses: true),
+                    value: isAnimating
+                )
                 .onAppear { isAnimating = true }
 
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 Text("Shake for a meal")
-                    .font(AppFonts.title)
+                    .font(.system(size: 28, weight: .semibold, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
 
-                Text("Can't decide? Let us pick for you.")
-                    .font(AppFonts.body)
+                Text("Can't decide? Let us pick.")
+                    .font(.system(size: 15, weight: .regular))
                     .foregroundStyle(AppColors.textSecondary)
                     .multilineTextAlignment(.center)
             }
 
             Spacer()
 
+            // Primary CTA — white capsule, dark text (inverted: high-contrast on dark bg)
             Button {
                 SoundPlayer.click()
                 onShake()
             } label: {
                 Label("Shake Now", systemImage: "hand.tap.fill")
                     .font(AppFonts.button)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppColors.background)   // dark text on white pill
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(AppColors.primary, in: .capsule)
+                    .padding(.vertical, 17)
+                    .background(AppColors.accent, in: .capsule)
             }
-            .padding(.horizontal, 32)
+            .buttonStyle(PressButtonStyle())
+            .padding(.horizontal, 40)
             .padding(.bottom, 80)
         }
     }
 }
 
 // MARK: - Dice animation model
-// Owned by @StateObject so it lives for exactly the lifetime of ShakeLoadingView —
-// never recreated on re-renders, timer never drops.
+
 @MainActor
 private final class DiceRollModel: ObservableObject {
     let faces = ["die.face.1", "die.face.2", "die.face.3",
@@ -186,9 +184,6 @@ private final class DiceRollModel: ObservableObject {
             .autoconnect()
             .sink { [weak self] _ in
                 guard let self else { return }
-                // No withAnimation here — animations are defined at the view layer
-                // via .animation(value:) so they never pollute the outer ZStack's
-                // transition transaction (which caused the probabilistic flash).
                 self.faceIndex = (self.faceIndex + 1) % self.faces.count
                 self.rotation += 60
                 self.scale = self.scale == 1.0 ? 1.18 : 1.0
@@ -202,6 +197,7 @@ private final class DiceRollModel: ObservableObject {
 }
 
 // MARK: - Loading State
+
 private struct ShakeLoadingView: View {
     @StateObject private var model = DiceRollModel()
 
@@ -212,37 +208,39 @@ private struct ShakeLoadingView: View {
             Image(systemName: model.faces[model.faceIndex])
                 .font(.system(size: 80))
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(AppColors.primary)
+                .foregroundStyle(AppColors.textPrimary)     // white dice on dark bg
                 .rotationEffect(.degrees(model.rotation))
                 .animation(.interpolatingSpring(stiffness: 280, damping: 14), value: model.rotation)
                 .scaleEffect(model.scale)
                 .animation(.interpolatingSpring(stiffness: 280, damping: 14), value: model.scale)
-                .contentTransition(.identity)   // prevents SwiftUI cross-fade on symbol change
-                .onAppear  { model.start() }
+                .contentTransition(.identity)
+                .onAppear   { model.start() }
                 .onDisappear { model.stop() }
 
             VStack(spacing: 8) {
-                Text("Rolling the dice...")
-                    .font(AppFonts.title)
+                Text("Rolling the dice…")
+                    .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(AppColors.textPrimary)
 
                 Text("Finding something delicious nearby")
-                    .font(AppFonts.body)
+                    .font(.system(size: 15, weight: .regular))
                     .foregroundStyle(AppColors.textSecondary)
                     .multilineTextAlignment(.center)
             }
 
             Spacer()
 
-            // Invisible placeholder keeps layout height identical to IdleShakeView
+            // Invisible placeholder mirrors IdleShakeView button height so the
+            // layout doesn't shift during the idle → loading transition.
             Color.clear
-                .frame(height: 56 + 40)
-                .padding(.horizontal, 32)
+                .frame(height: 54 + 40)
+                .padding(.horizontal, 40)
         }
     }
 }
 
 // MARK: - Error State
+
 private struct ErrorView: View {
     let message: String
     let onRetry: () -> Void
@@ -254,26 +252,28 @@ private struct ErrorView: View {
             VStack(spacing: 20) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 56))
-                    .foregroundStyle(AppColors.warning)
+                    .foregroundStyle(AppColors.textSecondary)
 
                 Text(message)
-                    .font(AppFonts.body)
+                    .font(.system(size: 15, weight: .regular))
                     .foregroundStyle(AppColors.textSecondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
+                    .padding(.horizontal, 40)
             }
 
             Spacer()
 
+            // Same inverted capsule style as the Shake Now button
             Button(action: onRetry) {
                 Label("Try Again", systemImage: "arrow.clockwise")
                     .font(AppFonts.button)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppColors.background)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(AppColors.primary, in: .capsule)
+                    .padding(.vertical, 17)
+                    .background(AppColors.accent, in: .capsule)
             }
-            .padding(.horizontal, 32)
+            .buttonStyle(PressButtonStyle())
+            .padding(.horizontal, 40)
             .padding(.bottom, 40)
         }
     }

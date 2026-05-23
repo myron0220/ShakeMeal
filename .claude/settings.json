@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /Users/mingzhewang/Documents/Current/ShakeMeal/ios/ShakeMeal *)",
+      "Read(//Users/mingzhewang/Documents/Current/**)",
+      "Bash(git commit -m 'docs: add stable rollback point to README *)",
+      "Bash(git reset *)"
+    ]
+  }
+}

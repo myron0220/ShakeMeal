@@ -6,35 +6,43 @@ struct FavoritesView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if mockFavorites.isEmpty {
-                    emptyState
-                } else {
-                    List(mockFavorites) { restaurant in
-                        RestaurantRow(restaurant: restaurant)
-                            .listRowBackground(AppColors.card)
+            ZStack {
+                AppColors.background.ignoresSafeArea()
+
+                Group {
+                    if mockFavorites.isEmpty {
+                        emptyState
+                    } else {
+                        List(mockFavorites) { restaurant in
+                            RestaurantRow(restaurant: restaurant)
+                                .listRowBackground(AppColors.surface)
+                                .listRowSeparatorTint(AppColors.textTertiary)
+                        }
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
                     }
-                    .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle("Favorites")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(AppColors.surface.opacity(0.95), for: .navigationBar)
         }
     }
 
     private var emptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "heart")
-                .font(.system(size: 48))
-                .foregroundStyle(AppColors.textSecondary)
+                .font(.system(size: 44))
+                .foregroundStyle(AppColors.textTertiary)
             Text("No favorites yet")
-                .font(AppFonts.title)
+                .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(AppColors.textPrimary)
-            Text("Heart a restaurant after shaking to save it here.")
-                .font(AppFonts.body)
+            Text("Heart a restaurant after shaking\nto save it here.")
+                .font(.system(size: 14, weight: .regular))
                 .foregroundStyle(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
         }
+        .padding(.horizontal, 40)
     }
 }
 
