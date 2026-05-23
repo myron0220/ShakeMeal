@@ -3,6 +3,7 @@ import Combine
 
 struct ShakeView: View {
     @EnvironmentObject var viewModel: ShakeViewModel
+    @EnvironmentObject var locationManager: LocationManager
 
     var body: some View {
         NavigationStack {
@@ -42,9 +43,14 @@ struct ShakeView: View {
             // the mutation originates (async Task, gesture, timer). This is more
             // reliable than withAnimation() calls inside the ViewModel.
             .animation(.spring(response: 0.45, dampingFraction: 0.78), value: viewModel.state)
-            .navigationTitle("ShakeMeal")
             .navigationBarTitleDisplayMode(.inline)
+            .animation(.easeInOut(duration: 0.3), value: locationManager.placeName)
             .toolbar {
+                // ── Location header (centre) ────────────────────────────────
+                ToolbarItem(placement: .principal) {
+                    locationTitle
+                }
+                // ── Filter (trailing) ───────────────────────────────────────
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         viewModel.isFilterPresented = true
@@ -60,6 +66,49 @@ struct ShakeView: View {
             .sheet(isPresented: $viewModel.isFilterPresented) {
                 FilterView(filter: $viewModel.filter)
             }
+        }
+    }
+
+    // MARK: - Location title
+
+    @ViewBuilder
+    private var locationTitle: some View {
+        if let name = locationManager.placeName {
+            // Has address — show "Near you" + street
+            VStack(spacing: 1) {
+                Text("Near you")
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(AppColors.textSecondary)
+
+                HStack(spacing: 3) {
+                    Image(systemName: "location.fill")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(AppColors.primary)
+                    Text(name)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(AppColors.textPrimary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        } else if locationManager.hasPermission {
+            // Permission granted but geocode not yet ready — pulse placeholder
+            VStack(spacing: 1) {
+                Text("Near you")
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(AppColors.textSecondary)
+                Text("Locating…")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+            .transition(.opacity)
+        } else {
+            // No permission — plain app name
+            Text("ShakeMeal")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(AppColors.textPrimary)
+                .transition(.opacity)
         }
     }
 }
@@ -222,6 +271,8 @@ private struct ErrorView: View {
 }
 
 #Preview {
-    ShakeView()
-        .environmentObject(ShakeViewModel(locationManager: LocationManager()))
+    let lm = LocationManager()
+    return ShakeView()
+        .environmentObject(ShakeViewModel(locationManager: lm))
+        .environmentObject(lm)
 }

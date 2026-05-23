@@ -5,9 +5,13 @@ import Combine
 final class LocationManager: NSObject, ObservableObject {
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
     @Published var currentLocation: CLLocation?
+    /// Human-readable street address from the last known location.
+    /// nil until the first reverse-geocode completes (or if permission is denied).
+    @Published var placeName: String?
     @Published var error: LocationError?
 
     private let manager = CLLocationManager()
+    private let geocoder = CLGeocoder()
 
     override init() {
         super.init()
@@ -30,6 +34,25 @@ final class LocationManager: NSObject, ObservableObject {
         }
         manager.requestLocation()
     }
+
+    // MARK: - Reverse geocoding
+
+    private func reverseGeocode(_ location: CLLocation) {
+        Task {
+            do {
+                let marks = try await geocoder.reverseGeocodeLocation(location)
+                guard let mark = marks.first else { return }
+                // Prefer "3900 Confederation Pkwy", fall back to just the street,
+                // then the city, then the raw placemark name.
+                let parts = [mark.subThoroughfare, mark.thoroughfare].compactMap { $0 }
+                placeName = parts.isEmpty
+                    ? (mark.locality ?? mark.name)
+                    : parts.joined(separator: " ")
+            } catch {
+                // silently ignore — nav bar falls back to "ShakeMeal"
+            }
+        }
+    }
 }
 
 // MARK: - CLLocationManagerDelegate
@@ -39,6 +62,7 @@ extension LocationManager: CLLocationManagerDelegate {
         guard let location = locations.last else { return }
         Task { @MainActor in
             self.currentLocation = location
+            self.reverseGeocode(location)
         }
     }
 
