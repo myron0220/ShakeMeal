@@ -405,7 +405,7 @@ make migrate-reset # drop all tables (destructive)
 | iOS — Shake feature (UI + ViewModel) | ✅ Done | Idle / Loading / Result / Error states |
 | iOS — Restaurant reveal card | ✅ Done | Photo header, directions, share, ♥ |
 | iOS — Filters, History, Favorites | ✅ Done | Mock data; real data pending backend |
-| iOS — Theme (Colors, Typography) | ✅ Done | System-adaptive colors (`UIColor`) |
+| iOS — Theme (Colors, Typography) | ✅ Done | Fixed dark palette (`#0E0E0E` bg, white accent, SF Pro .default) |
 | iOS — Tested on simulator | ✅ Done | iPhone 16, iOS 17 — all screens verified |
 | iOS — Real API integration | ✅ Done | `APIClient` wired, end-to-end verified on simulator |
 | iOS — Dice rolling animation + smooth transitions | ✅ Done | SF Symbols `die.face.1–6` cycling with spring rotation/bounce; spring transitions between all states; no layout jump or blank frames |
@@ -443,20 +443,28 @@ make migrate-reset # drop all tables (destructive)
 | Backend — Viper BindEnv fix | ✅ Done | `AutomaticEnv()` + `Unmarshal()` don't work together; explicit `BindEnv` calls added for all keys |
 | Backend — Mock data: real Mississauga restaurants | ✅ Done | 5 real restaurants near 3900 Confederation Pkwy (Kinton Ramen, Osmow's, Moxies, Scaddabush, Gyubee) with Unsplash photos |
 | iOS — StoreKit 2 Paywall | 🔜 Pending | |
+| iOS — Console-style dark UI redesign | ✅ Done | Fixed dark palette, photo hero, press physics, no orange |
 
 ---
 
 ## Stable Baseline
 
-Current baseline: **`252e26d`** — all features verified working locally (MacBook Pro, simulator + real device).
+Current baseline: **`9e89246`** — console-style dark UI redesign, all features verified building clean.
 
+- **Dark palette**: `#0E0E0E` background, `#1C1C1C` surface, white accent — orange removed entirely
+- **Restaurant card**: full-bleed hero photo (50% screen height), name + meta overlaid on gradient — no white card
+- **Action strip**: Directions · Save · Share as 3 minimal icon+label cells on dark surface
+- **Shake view**: dark idle screen, white inverted CTA capsule, transparent nav bar
+- **Press animation**: `PressButtonStyle` (spring 0.94 scale) on every button — console button feel
+- **Typography**: SF Pro `.default` throughout (was `.rounded`)
+- **Filter view**: custom dark scroll view replacing Form; inverted chip colours
+- **All tabs**: dark list/form backgrounds; auth button is white capsule + dark text
+- **Forced dark mode**: `.preferredColorScheme(.dark)` at root
 - Shake → restaurant reveal (guaranteed spring slide-up, no flash, nav bar never covered)
 - Real-time location in nav bar top-left (CLGeocoder, 1/3 screen width, truncates cleanly)
 - Custom tab bar (spring bounce + haptic, safeAreaInset)
-- Favorites + history (3-item cap in ProfileView)
 - Mock data: 5 real Mississauga restaurants with Unsplash photos
 - Backend: local `go run ./cmd/server` with mock provider (no DB or API key needed for basic shake)
-- Backend: Viper BindEnv fix — all env vars correctly loaded from Fly.io secrets / `.env`
 - AppConfig → `http://localhost:8080` (local dev mode)
 
 > **To revert here:** `git revert <commits>` — see project memory for details.
