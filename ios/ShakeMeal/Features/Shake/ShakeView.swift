@@ -89,7 +89,10 @@ private struct IdleShakeView: View {
 
             Spacer()
 
-            Button(action: onShake) {
+            Button {
+                SoundPlayer.click()
+                onShake()
+            } label: {
                 Label("Shake Now", systemImage: "hand.tap.fill")
                     .font(AppFonts.button)
                     .foregroundStyle(.white)

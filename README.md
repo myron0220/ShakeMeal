@@ -427,7 +427,31 @@ make migrate-reset # drop all tables (destructive)
 | iOS — Favorites + History in Profile | ✅ Done | 2-tab layout (Shake + Profile); ❤️ toggle on result card; history auto-recorded on card appear; pull-to-refresh |
 | Backend — `GET /api/v1/auth/me` | ✅ Done | Returns authenticated user's profile; protected route via JWT middleware |
 | iOS — Profile name persists after restart | ✅ Done | `AuthManager.fetchMe()` called on init when token exists; name/email shown immediately without re-login |
+| iOS — Button click sound (Shake Now + Shake Again) | ✅ Done | Nintendo Switch–style click: light haptic + system tick sound `1057` on both shake buttons |
+| iOS — Restaurant photo header | ✅ Done | `scaledToFill` + `maxWidth: .infinity` fix; no more squishing |
+| iOS — Unsplash photos in mock data | ✅ Done | All 5 mock restaurants have real food photos for local dev/testing |
 | Deploy backend to Railway / Fly.io | 🔜 Next | |
+
+---
+
+## Stable Baseline
+
+The current `main` HEAD is the stable baseline for UI work.
+
+> **To roll back here if UI polish breaks things:**
+> ```bash
+> # Find the commit hash
+> git log --oneline -1
+>
+> # Hard reset (destructive — discards all uncommitted changes)
+> git reset --hard <commit-hash>
+> git push --force origin main
+>
+> # Regenerate xcodeproj after reset (xcodeproj is gitignored)
+> cd ios && xcodegen generate
+> ```
+
+---
 
 ## Core Ideas by Me:
   - Piano sounds

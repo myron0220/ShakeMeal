@@ -25,7 +25,10 @@ struct RestaurantRevealView: View {
                 .padding(.horizontal, 16)
                 .offset(y: -24)
 
-                Button(action: onShakeAgain) {
+                Button {
+                    SoundPlayer.click()
+                    onShakeAgain()
+                } label: {
                     Label("Shake Again", systemImage: "arrow.clockwise")
                         .font(AppFonts.button)
                         .foregroundStyle(AppColors.primary)
@@ -50,7 +53,11 @@ struct RestaurantRevealView: View {
         ZStack(alignment: .bottom) {
             if let url = restaurant.photoURL {
                 AsyncImage(url: url) { image in
-                    image.resizable().scaledToFill()
+                    image
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity, minHeight: 280, maxHeight: 280)
+                        .clipped()
                 } placeholder: {
                     placeholderGradient
                 }
@@ -58,7 +65,7 @@ struct RestaurantRevealView: View {
                 placeholderGradient
             }
         }
-        .frame(height: 280)
+        .frame(maxWidth: .infinity, minHeight: 280, maxHeight: 280)
         .clipped()
     }
 
