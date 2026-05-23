@@ -28,10 +28,10 @@ struct ShakeView: View {
                     RestaurantRevealView(restaurant: restaurant) {
                         viewModel.shakeAgain()
                     }
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .bottom),
-                        removal: .opacity
-                    ))
+                    // No .transition here — RestaurantRevealView drives its own
+                    // entry animation via onAppear so the slide-up is guaranteed
+                    // to fire even when ZStack's animation context is unreliable.
+                    .transition(.opacity.animation(.easeOut(duration: 0.1)))
 
                 case .error(let message):
                     ErrorView(message: message) { viewModel.shake() }

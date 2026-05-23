@@ -10,6 +10,13 @@ struct RestaurantRevealView: View {
     @State private var favoriteLoading = false
     @State private var iconRotation: Double = 0
 
+    // Self-contained entry animation.
+    // Driven by onAppear so it fires reliably regardless of what the parent
+    // ZStack animation context is doing. The view starts off-screen (y+600,
+    // transparent) and springs into place when it first appears.
+    @State private var slideOffset: CGFloat = 600
+    @State private var slideOpacity: Double = 0
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
@@ -46,6 +53,16 @@ struct RestaurantRevealView: View {
                         iconRotation += 720
                     }
                 }
+            }
+        }
+        .offset(y: slideOffset)
+        .opacity(slideOpacity)
+        .onAppear {
+            // withAnimation inside onAppear is 100 % reliable — the view is
+            // already mounted when this fires, so the animation context is stable.
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
+                slideOffset  = 0
+                slideOpacity = 1
             }
         }
         .task {
