@@ -430,6 +430,8 @@ make migrate-reset # drop all tables (destructive)
 | iOS — Button click sound (Shake Now + Shake Again) | ✅ Done | Nintendo Switch–style click: light haptic + system tick sound `1057` on both shake buttons |
 | iOS — Restaurant photo header | ✅ Done | `scaledToFill` + `maxWidth: .infinity` fix; no more squishing |
 | iOS — Unsplash photos in mock data | ✅ Done | All 5 mock restaurants have real food photos for local dev/testing |
+| iOS — Nav bar dedicated area | ✅ Done | Removed `ignoresSafeArea` — title + filter icon no longer overlap the photo |
+| iOS — Shake Again button redesign | ✅ Done | Large circular icon-only button (88pt), no text, no rotation animation |
 | Deploy backend to Railway / Fly.io | 🔜 Next | |
 
 ---
