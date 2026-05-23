@@ -146,6 +146,7 @@ ShakeMeal/
     │   │       ├── health.go                  # GET /health
     │   │       ├── restaurants.go             # GET /api/v1/shake
     │   │       ├── auth.go                    # POST /auth/register · /login · /apple · /refresh
+    │   │       ├── me.go                      # GET /auth/me — returns authenticated user profile
     │   │       ├── favorites.go               # GET/POST/DELETE /api/v1/favorites
     │   │       └── history.go                 # GET/POST /api/v1/history
     │   ├── repository/
@@ -190,6 +191,7 @@ POST   /api/v1/auth/register       Register with email or phone + password
 POST   /api/v1/auth/login          Sign in with email or phone + password
 POST   /api/v1/auth/apple          Sign in with Apple (real device only)
 POST   /api/v1/auth/refresh        Refresh JWT
+GET    /api/v1/auth/me             Get current user profile (JWT required)
 
 # Core
 GET    /api/v1/shake               Random nearby restaurant
@@ -422,7 +424,9 @@ make migrate-reset # drop all tables (destructive)
 | iOS — Sign in with Apple + Keychain | 🔜 TODO | Code complete; needs real-device test with Apple ID — simulator login not possible |
 | iOS — Email / Phone + Password auth | ✅ Done | `ProfileView` form with Register/Sign In toggle; wired to `AuthManager`; works on simulator |
 | Backend — Favorites + History endpoints | ✅ Done | `GET/POST/DELETE /api/v1/favorites` · `GET/POST /api/v1/history`; JWT-protected; smoke tested |
-| iOS — Favorites + History in Profile | ✅ Done | 2-tab layout (Shake + Profile); ❤️ toggle on result card; history on Directions tap; pull-to-refresh |
+| iOS — Favorites + History in Profile | ✅ Done | 2-tab layout (Shake + Profile); ❤️ toggle on result card; history auto-recorded on card appear; pull-to-refresh |
+| Backend — `GET /api/v1/auth/me` | ✅ Done | Returns authenticated user's profile; protected route via JWT middleware |
+| iOS — Profile name persists after restart | ✅ Done | `AuthManager.fetchMe()` called on init when token exists; name/email shown immediately without re-login |
 | Deploy backend to Railway / Fly.io | 🔜 Next | |
 
 ## Core Ideas by Me:
