@@ -8,36 +8,43 @@ struct ShakeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
+                // Background layer — intentionally escapes safe areas so the
+                // screen edges are filled even on notched / Dynamic Island devices.
                 AppColors.background.ignoresSafeArea()
 
-                switch viewModel.state {
-                case .idle:
-                    IdleShakeView { viewModel.shake() }
-                        .transition(.asymmetric(
-                            insertion: .opacity,
-                            removal: .opacity.combined(with: .scale(scale: 0.95))
-                        ))
+                // Content layer — clipped so the spring bounce on RestaurantRevealView
+                // cannot visually overflow into the navigation bar above.
+                ZStack {
+                    switch viewModel.state {
+                    case .idle:
+                        IdleShakeView { viewModel.shake() }
+                            .transition(.asymmetric(
+                                insertion: .opacity,
+                                removal: .opacity.combined(with: .scale(scale: 0.95))
+                            ))
 
-                case .loading:
-                    ShakeLoadingView()
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .scale(scale: 0.85)),
-                            removal: .opacity.combined(with: .scale(scale: 1.1))
-                        ))
+                    case .loading:
+                        ShakeLoadingView()
+                            .transition(.asymmetric(
+                                insertion: .opacity.combined(with: .scale(scale: 0.85)),
+                                removal: .opacity.combined(with: .scale(scale: 1.1))
+                            ))
 
-                case .result(let restaurant):
-                    RestaurantRevealView(restaurant: restaurant) {
-                        viewModel.shakeAgain()
+                    case .result(let restaurant):
+                        RestaurantRevealView(restaurant: restaurant) {
+                            viewModel.shakeAgain()
+                        }
+                        // No .transition here — RestaurantRevealView drives its own
+                        // entry animation via onAppear so the slide-up is guaranteed
+                        // to fire even when ZStack's animation context is unreliable.
+                        .transition(.opacity.animation(.easeOut(duration: 0.1)))
+
+                    case .error(let message):
+                        ErrorView(message: message) { viewModel.shake() }
+                            .transition(.opacity)
                     }
-                    // No .transition here — RestaurantRevealView drives its own
-                    // entry animation via onAppear so the slide-up is guaranteed
-                    // to fire even when ZStack's animation context is unreliable.
-                    .transition(.opacity.animation(.easeOut(duration: 0.1)))
-
-                case .error(let message):
-                    ErrorView(message: message) { viewModel.shake() }
-                        .transition(.opacity)
                 }
+                .clipped()
             }
             // Declarative animation: fires on every state change regardless of where
             // the mutation originates (async Task, gesture, timer). This is more
