@@ -457,4 +457,5 @@ The current `main` HEAD is the stable baseline for UI work.
 ---
 
 ## Core Ideas by Me:
+  - It cannot just for "meal", this recommendation system can be used for anything~
   - Piano sounds

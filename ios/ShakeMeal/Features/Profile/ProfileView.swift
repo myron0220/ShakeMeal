@@ -66,7 +66,7 @@ private struct SignedInView: View {
                         .foregroundStyle(AppColors.textSecondary)
                         .padding(.vertical, 4)
                 } else {
-                    ForEach(store.favorites) { fav in
+                    ForEach(store.favorites.prefix(3)) { fav in
                         PlaceRow(
                             name:       fav.name,
                             subtitle:   fav.cuisine,
@@ -98,7 +98,7 @@ private struct SignedInView: View {
                         .foregroundStyle(AppColors.textSecondary)
                         .padding(.vertical, 4)
                 } else {
-                    ForEach(store.history) { item in
+                    ForEach(store.history.prefix(3)) { item in
                         PlaceRow(
                             name:       item.name,
                             subtitle:   item.cuisine,

@@ -11,7 +11,8 @@ settings:
     SWIFT_VERSION: 5.9
     MARKETING_VERSION: 1.0.0
     CURRENT_PROJECT_VERSION: 1
-    DEVELOPMENT_TEAM: ""          # Add your Apple Team ID here
+    DEVELOPMENT_TEAM: "gfs28ru6av"
+    CODE_SIGN_STYLE: Automatic
 
 targets:
   ShakeMeal:
@@ -29,13 +30,9 @@ targets:
         UIApplicationSupportsIndirectInputEvents: true
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true   # allows http://localhost in DEBUG builds
-    entitlements:
-      path: ShakeMeal/ShakeMeal.entitlements
-      properties:
-        com.apple.developer.applesignin:
-          - Default
+    # entitlements: Sign in with Apple requires paid developer account — re-enable before App Store submission
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.shakemeal.app
         INFOPLIST_FILE: ShakeMeal/Info.plist
-        CODE_SIGN_ENTITLEMENTS: ShakeMeal/ShakeMeal.entitlements
+        # CODE_SIGN_ENTITLEMENTS: ShakeMeal/ShakeMeal.entitlements  # re-enable with paid account
