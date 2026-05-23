@@ -29,14 +29,12 @@ struct RestaurantRevealView: View {
                     SoundPlayer.click()
                     onShakeAgain()
                 } label: {
-                    Label("Shake Again", systemImage: "arrow.clockwise")
-                        .font(AppFonts.button)
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 36, weight: .semibold))
                         .foregroundStyle(AppColors.primary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(AppColors.primary.opacity(0.12), in: .capsule)
+                        .frame(width: 88, height: 88)
+                        .background(AppColors.primary.opacity(0.12), in: .circle)
                 }
-                .padding(.horizontal, 32)
                 .padding(.bottom, 32)
             }
         }
