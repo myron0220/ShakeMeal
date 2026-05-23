@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"sort"
+	"strings"
 	"syscall"
 	"time"
 
@@ -51,6 +54,11 @@ func main() {
 		}
 		defer db.Close()
 		log.Info("database connected")
+
+		// ── Auto-migrate ─────────────────────────────────────────────────────
+		if err := runMigrations(context.Background(), db, log); err != nil {
+			log.Fatal("migrations failed", zap.Error(err))
+		}
 
 		if cfg.JWTSecret == "" {
 			log.Fatal("JWT_SECRET must be set when DATABASE_URL is configured")
@@ -117,4 +125,32 @@ func main() {
 		log.Error("shutdown error", zap.Error(err))
 	}
 	log.Info("server stopped")
+}
+
+// runMigrations runs all *.up.sql files in the migrations/ directory in order.
+func runMigrations(ctx context.Context, db *pgxpool.Pool, log *zap.Logger) error {
+	entries, err := filepath.Glob("migrations/*.up.sql")
+	if err != nil {
+		return err
+	}
+	sort.Strings(entries)
+
+	for _, f := range entries {
+		sql, err := os.ReadFile(f)
+		if err != nil {
+			return err
+		}
+		// Skip empty files
+		if len(strings.TrimSpace(string(sql))) == 0 {
+			continue
+		}
+		if _, err := db.Exec(ctx, string(sql)); err != nil {
+			// Ignore "already exists" errors so re-deploys are safe
+			if !strings.Contains(err.Error(), "already exists") {
+				return err
+			}
+		}
+		log.Info("migration applied", zap.String("file", f))
+	}
+	return nil
 }
