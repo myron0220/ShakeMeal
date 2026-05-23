@@ -431,7 +431,8 @@ make migrate-reset # drop all tables (destructive)
 | iOS — Restaurant photo header | ✅ Done | `scaledToFill` + `maxWidth: .infinity` fix; no more squishing |
 | iOS — Unsplash photos in mock data | ✅ Done | All 5 mock restaurants have real food photos for local dev/testing |
 | iOS — Nav bar dedicated area | ✅ Done | Removed `ignoresSafeArea` — title + filter icon no longer overlap the photo |
-| iOS — Shake Again button redesign | ✅ Done | Large circular icon-only button (88pt), no text, no rotation animation |
+| iOS — Shake Again button redesign | ✅ Done | Large circular icon-only button (88pt), no text |
+| iOS — Shake Again idle animation | ✅ Done | Auto-spins 720° every 3–6s with spring bounce (response:1.4, dampingFraction:0.6) |
 | Deploy backend to Railway / Fly.io | 🔜 Next | |
 
 ---
