@@ -1,6 +1,11 @@
 import SwiftUI
 import MapKit
 
+// How long the ring must be held before release triggers refresh.
+// This exactly matches the dim animation duration so visual feedback
+// and trigger threshold are always in sync.
+private let kRingHoldThreshold: TimeInterval = 0.2
+
 struct RestaurantRevealView: View {
     let restaurant: Restaurant
     let onShakeAgain: () -> Void
@@ -12,59 +17,29 @@ struct RestaurantRevealView: View {
     @State private var pressStartTime: Date? = nil
 
     // Self-contained entry animation.
-    // Driven by onAppear so it fires reliably regardless of what the parent
-    // ZStack animation context is doing. The view starts off-screen (y+600,
-    // transparent) and springs into place when it first appears.
     @State private var slideOffset: CGFloat = 600
     @State private var slideOpacity: Double = 0
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                photoHeader
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 0) {
+                    photoHeader
 
-                VStack(alignment: .leading, spacing: 20) {
-                    nameSection
-                    metaRow
-                    Divider()
-                    actionButtons
+                    VStack(alignment: .leading, spacing: 20) {
+                        nameSection
+                        metaRow
+                        Divider()
+                        actionButtons
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 24)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 24)
+            }
 
-                // Button action is empty — all logic lives in the gesture below.
-                // A tap (any duration) triggers refresh on press-release.
-                Button { } label: {
-                    Circle()
-                        .trim(from: 0.0, to: 0.9382)
-                        .stroke(AppColors.primary,
-                                style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                        .frame(width: 80, height: 80)
-                        // pressAngle goes negative (CCW) while held; baseRotation uses spring
-                        .rotationEffect(.degrees(ringVM.displayAngle))
-                        .animation(
-                            .spring(response: 0.8, dampingFraction: 0.42),
-                            value: ringVM.baseRotation
-                        )
-                }
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { _ in
-                            if pressStartTime == nil {
-                                pressStartTime = Date()
-                            }
-                            ringVM.startPress()
-                        }
-                        .onEnded { _ in
-                            let elapsed = pressStartTime.map { Date().timeIntervalSince($0) } ?? 0
-                            pressStartTime = nil
-                            ringVM.endPress()
-                            // Only refresh if held long enough for the button to visually dim
-                            guard elapsed >= 0.35 else { return }
-                            SoundPlayer.click()
-                            onShakeAgain()
-                        }
-                )
+            // Ring button lives OUTSIDE the ScrollView so iOS doesn't
+            // delay the touch — we control the dim timing ourselves.
+            ringButton
                 .padding(.top, 16)
                 .padding(.bottom, 48)
                 .task {
@@ -74,14 +49,11 @@ struct RestaurantRevealView: View {
                         ringVM.autoBounce()
                     }
                 }
-            }
         }
         .background(.white)
         .offset(y: slideOffset)
         .opacity(slideOpacity)
         .onAppear {
-            // withAnimation inside onAppear is 100 % reliable — the view is
-            // already mounted when this fires, so the animation context is stable.
             withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
                 slideOffset  = 0
                 slideOpacity = 1
@@ -89,8 +61,46 @@ struct RestaurantRevealView: View {
         }
         .task {
             await checkFavoriteStatus()
-            recordHistory()   // record every shake result automatically
+            recordHistory()
         }
+    }
+
+    // MARK: - Ring button (outside ScrollView)
+
+    private var ringButton: some View {
+        Button { } label: {
+            Circle()
+                .trim(from: 0.0, to: 0.9382)
+                .stroke(AppColors.primary,
+                        style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                .frame(width: 80, height: 80)
+                .rotationEffect(.degrees(ringVM.displayAngle))
+                .animation(
+                    .spring(response: 0.8, dampingFraction: 0.42),
+                    value: ringVM.baseRotation
+                )
+                // Our own dim: easeIn over exactly kRingHoldThreshold seconds.
+                // When the dim completes the user knows they can release.
+                .opacity(ringVM.isPressing ? 0.35 : 1.0)
+                .animation(.easeIn(duration: kRingHoldThreshold), value: ringVM.isPressing)
+        }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    if pressStartTime == nil {
+                        pressStartTime = Date()
+                    }
+                    ringVM.startPress()
+                }
+                .onEnded { _ in
+                    let elapsed = pressStartTime.map { Date().timeIntervalSince($0) } ?? 0
+                    pressStartTime = nil
+                    ringVM.endPress()
+                    guard elapsed >= kRingHoldThreshold else { return }
+                    SoundPlayer.click()
+                    onShakeAgain()
+                }
+        )
     }
 
     // MARK: - Sub-views
@@ -200,9 +210,7 @@ struct RestaurantRevealView: View {
         do {
             let favs = try await APIClient.shared.getFavorites()
             isFavorited = favs.contains { $0.placeID == restaurant.id }
-        } catch {
-            // silently ignore — heart just shows unfilled
-        }
+        } catch { }
     }
 
     private func toggleFavorite() {
