@@ -262,6 +262,7 @@ struct ShakeLoadingView: View {
                 .stroke(AppColors.primary,
                         style: StrokeStyle(lineWidth: 5, lineCap: .round))
                 .frame(width: 80, height: 80)
+                .frame(maxWidth: .infinity)
                 .rotationEffect(.degrees(ringVM.baseRotation + burstRotation + steadyRotation))
                 .onAppear {
                     let energy = ringVM.releaseEnergy   // degrees accumulated during press
