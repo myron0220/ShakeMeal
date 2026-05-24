@@ -409,6 +409,9 @@ make migrate-reset # drop all tables (destructive)
 | iOS — Tested on simulator | ✅ Done | iPhone 16, iOS 17 — all screens verified |
 | iOS — Real API integration | ✅ Done | `APIClient` wired, end-to-end verified on simulator |
 | iOS — Dice rolling animation + smooth transitions | ✅ Done | SF Symbols `die.face.1–6` cycling with spring rotation/bounce; spring transitions between all states; no layout jump or blank frames |
+| iOS — Ring state lifted to `RingViewModel` | ✅ Done | `@StateObject` in `ShakeView`; shared with `RestaurantRevealView` and `ShakeLoadingView` for visual continuity |
+| iOS — Press-and-hold to refresh | ✅ Done | Hold ring 1.0s (easeIn dim); quick tap does nothing; CCW rotation during hold; auto-bounce spring cancelled on press start |
+| iOS — Loading screen arc ring with burst animation | ✅ Done | "Exploring..." screen; ring starts from last press angle; fast CW burst proportional to press energy, then steady spin |
 | iOS — StoreKit 2 Paywall | 🔜 Pending | |
 | Backend — Go scaffold | ✅ Done | Gin + Viper + Zap, runs on :8080 |
 | Backend — `/health` + `/api/v1/shake` | ✅ Done | Mock provider (no API key needed) |
@@ -448,15 +451,17 @@ make migrate-reset # drop all tables (destructive)
 
 ## Stable Baseline
 
-Current baseline: **`1ac8f30`** — mock data expanded to 22 restaurants, verified on simulator.
+Current baseline: **`4eb1d99`** — press-and-hold ring, RingViewModel, Exploring loading screen.
 
-- Restaurant info: flat section below photo (no card/rounded rect), white page background
-- Shake-again: arc ring (6.18% gap, 80pt, round linecap), occasional spring-bounce rotation every 6–12s
+- Restaurant info: flat section below photo (no card/rounded rect), white page background, 340pt photo header
+- Shake-again: arc ring (6.18% gap, 80pt, round linecap); hold 1.0s to refresh (ring dims easeIn); quick tap does nothing; CCW rotation during hold; auto-bounce spring cancelled on press start to prevent conflict
+- Ring state shared via `RingViewModel` (@StateObject in ShakeView) across result and loading screens
+- Loading screen: "Exploring…" title; ring starts from last press angle; fast CW burst proportional to press energy, then steady spin
 - Tab bar: compact (icon 16pt, label 8pt, 5pt vertical padding)
 - Shake → restaurant reveal (guaranteed spring slide-up, no flash, nav bar never covered)
 - Real-time location in nav bar top-left (CLGeocoder, 1/3 screen width, truncates cleanly)
 - Favorites + history (3-item cap in ProfileView)
-- Mock data: 5 real Mississauga restaurants with Unsplash photos
+- Mock data: 22 restaurants across 12 cuisines with Unsplash photos
 - Backend: local `go run ./cmd/server` with mock provider
 - AppConfig → `http://localhost:8080` (local dev mode)
 
