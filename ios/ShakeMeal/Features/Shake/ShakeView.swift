@@ -133,7 +133,7 @@ struct ShakeView: View {
                 // ── Location header (leading) ───────────────────────────────
                 ToolbarItem(placement: .topBarLeading) {
                     locationTitle
-                        .padding(.bottom, 40)
+                        .padding(.bottom, 10)
                 }
                 // ── Filter (trailing) ───────────────────────────────────────
                 ToolbarItem(placement: .topBarTrailing) {
@@ -146,7 +146,7 @@ struct ShakeView: View {
                                              ? AppColors.textSecondary
                                              : AppColors.primary)
                     }
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 10)
                 }
             }
             .sheet(isPresented: $viewModel.isFilterPresented) {
@@ -337,7 +337,7 @@ private struct ErrorView: View {
                     .background(AppColors.primary, in: .capsule)
             }
             .padding(.horizontal, 32)
-            .padding(.bottom, 40)
+            .padding(.bottom, 10)
         }
     }
 }
