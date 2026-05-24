@@ -282,7 +282,7 @@ struct ShakeLoadingView: View {
                 }
 
             VStack(spacing: 8) {
-                Text("Rolling the dice...")
+                Text("Exploring...")
                     .font(AppFonts.title)
                     .foregroundStyle(AppColors.textPrimary)
 
