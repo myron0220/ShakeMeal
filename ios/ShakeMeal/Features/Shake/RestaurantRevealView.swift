@@ -4,14 +4,11 @@ import MapKit
 struct RestaurantRevealView: View {
     let restaurant: Restaurant
     let onShakeAgain: () -> Void
+    @ObservedObject var ringVM: RingViewModel
 
     @EnvironmentObject var authManager: AuthManager
     @State private var isFavorited = false
     @State private var favoriteLoading = false
-    @State private var iconRotation: Double = 0
-    @State private var pressAngle: Double = 0      // accumulates only during press
-    @State private var isPressing: Bool = false
-    @State private var pressTask: Task<Void, Never>? = nil
 
     // Self-contained entry animation.
     // Driven by onAppear so it fires reliably regardless of what the parent
@@ -34,50 +31,30 @@ struct RestaurantRevealView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 24)
 
-                Button {
-                    SoundPlayer.click()
-                    onShakeAgain()
-                } label: {
+                // Button action is empty — all logic lives in the gesture below.
+                // A tap (any duration) triggers refresh on press-release.
+                Button { } label: {
                     Circle()
                         .trim(from: 0.0, to: 0.9382)
                         .stroke(AppColors.primary,
                                 style: StrokeStyle(lineWidth: 5, lineCap: .round))
                         .frame(width: 80, height: 80)
-                        // pressAngle accumulates raw (no spring); iconRotation uses spring
-                        .rotationEffect(.degrees(iconRotation + pressAngle))
+                        // pressAngle goes negative (CCW) while held; baseRotation uses spring
+                        .rotationEffect(.degrees(ringVM.displayAngle))
                         .animation(
                             .spring(response: 0.8, dampingFraction: 0.42),
-                            value: iconRotation
+                            value: ringVM.baseRotation
                         )
                 }
-                // Detect finger-down / finger-up without interfering with the tap action
                 .simultaneousGesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { _ in
-                            guard !isPressing else { return }
-                            isPressing = true
-                            pressTask?.cancel()
-                            pressTask = Task { @MainActor in
-                                // ~60°/s → 1° per 16 ms ≈ 1 full rotation every 6 s
-                                while !Task.isCancelled {
-                                    try? await Task.sleep(nanoseconds: 16_666_666)
-                                    guard !Task.isCancelled else { break }
-                                    pressAngle += 1.0
-                                }
-                            }
+                            ringVM.startPress()
                         }
                         .onEnded { _ in
-                            isPressing = false
-                            pressTask?.cancel()
-                            pressTask = nil
-                            // Fold accumulated press angle into iconRotation with NO
-                            // animation so the displayed angle stays identical.
-                            var tx = Transaction()
-                            tx.disablesAnimations = true
-                            withTransaction(tx) {
-                                iconRotation += pressAngle
-                                pressAngle = 0
-                            }
+                            ringVM.endPress()
+                            SoundPlayer.click()
+                            onShakeAgain()
                         }
                 )
                 .padding(.top, 16)
@@ -85,9 +62,8 @@ struct RestaurantRevealView: View {
                 .task {
                     while !Task.isCancelled {
                         try? await Task.sleep(for: .seconds(Double.random(in: 6.0...12.0)))
-                        // Skip auto-bounce while the user is holding the ring
-                        guard !Task.isCancelled && !isPressing else { continue }
-                        iconRotation += 360
+                        guard !Task.isCancelled else { break }
+                        ringVM.autoBounce()
                     }
                 }
             }
@@ -267,6 +243,6 @@ struct RestaurantRevealView: View {
 }
 
 #Preview {
-    RestaurantRevealView(restaurant: .mock) {}
+    RestaurantRevealView(restaurant: .mock, onShakeAgain: {}, ringVM: RingViewModel())
         .environmentObject(AuthManager())
 }

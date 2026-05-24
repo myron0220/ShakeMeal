@@ -1,9 +1,75 @@
 import SwiftUI
 import Combine
 
+// MARK: - Ring State ViewModel (shared between RestaurantRevealView and ShakeLoadingView)
+
+@MainActor
+final class RingViewModel: ObservableObject {
+    @Published var baseRotation: Double = 0
+    @Published var pressAngle: Double = 0      // negative = CCW while held
+    @Published var isPressing: Bool = false
+
+    /// Absolute CCW degrees accumulated during last press — handed to loading view
+    private(set) var releaseEnergy: Double = 0
+
+    private var pressTask: Task<Void, Never>?
+
+    var displayAngle: Double { baseRotation + pressAngle }
+
+    // Called when the user begins pressing the ring
+    func startPress() {
+        guard !isPressing else { return }
+        isPressing = true
+        pressTask?.cancel()
+        pressTask = Task { [weak self] in
+            // ~60°/s CCW → -1° per 16 ms
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 16_666_666)
+                guard let self, !Task.isCancelled else { break }
+                self.pressAngle -= 1.0
+            }
+        }
+    }
+
+    // Called when the user lifts their finger
+    func endPress() {
+        isPressing = false
+        pressTask?.cancel()
+        pressTask = nil
+        // Capture energy before folding
+        releaseEnergy = abs(pressAngle)
+        // Fold pressAngle into baseRotation without animation
+        var tx = Transaction()
+        tx.disablesAnimations = true
+        withTransaction(tx) {
+            baseRotation += pressAngle
+            pressAngle = 0
+        }
+    }
+
+    // Called by the auto-bounce timer
+    func autoBounce() {
+        guard !isPressing else { return }
+        baseRotation += 360
+    }
+
+    // Reset for a fresh result view
+    func resetForResult() {
+        var tx = Transaction()
+        tx.disablesAnimations = true
+        withTransaction(tx) {
+            pressAngle = 0
+        }
+        // don't reset baseRotation — visual continuity
+    }
+}
+
+// MARK: - ShakeView
+
 struct ShakeView: View {
     @EnvironmentObject var viewModel: ShakeViewModel
     @EnvironmentObject var locationManager: LocationManager
+    @StateObject private var ringVM = RingViewModel()
 
     var body: some View {
         NavigationStack {
@@ -24,20 +90,23 @@ struct ShakeView: View {
                             ))
 
                     case .loading:
-                        ShakeLoadingView()
+                        ShakeLoadingView(ringVM: ringVM)
                             .transition(.asymmetric(
                                 insertion: .opacity.combined(with: .scale(scale: 0.85)),
                                 removal: .opacity.combined(with: .scale(scale: 1.1))
                             ))
 
                     case .result(let restaurant):
-                        RestaurantRevealView(restaurant: restaurant) {
-                            viewModel.shakeAgain()
-                        }
+                        RestaurantRevealView(
+                            restaurant: restaurant,
+                            onShakeAgain: { viewModel.shakeAgain() },
+                            ringVM: ringVM
+                        )
                         // No .transition here — RestaurantRevealView drives its own
                         // entry animation via onAppear so the slide-up is guaranteed
                         // to fire even when ZStack's animation context is unreliable.
                         .transition(.opacity.animation(.easeOut(duration: 0.1)))
+                        .onAppear { ringVM.resetForResult() }
 
                     case .error(let message):
                         ErrorView(message: message) { viewModel.shake() }
@@ -168,58 +237,41 @@ private struct IdleShakeView: View {
     }
 }
 
-// MARK: - Dice animation model
-// Owned by @StateObject so it lives for exactly the lifetime of ShakeLoadingView —
-// never recreated on re-renders, timer never drops.
-@MainActor
-private final class DiceRollModel: ObservableObject {
-    let faces = ["die.face.1", "die.face.2", "die.face.3",
-                 "die.face.4", "die.face.5", "die.face.6"]
-    @Published private(set) var faceIndex: Int   = 0
-    @Published private(set) var rotation: Double = 0
-    @Published private(set) var scale: CGFloat   = 1.0
-
-    private var cancellable: AnyCancellable?
-
-    func start() {
-        cancellable = Timer.publish(every: 0.15, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                guard let self else { return }
-                // No withAnimation here — animations are defined at the view layer
-                // via .animation(value:) so they never pollute the outer ZStack's
-                // transition transaction (which caused the probabilistic flash).
-                self.faceIndex = (self.faceIndex + 1) % self.faces.count
-                self.rotation += 60
-                self.scale = self.scale == 1.0 ? 1.18 : 1.0
-            }
-    }
-
-    func stop() {
-        cancellable?.cancel()
-        cancellable = nil
-    }
-}
-
 // MARK: - Loading State
-private struct ShakeLoadingView: View {
-    @StateObject private var model = DiceRollModel()
+struct ShakeLoadingView: View {
+    @ObservedObject var ringVM: RingViewModel
+    @State private var steadyRotation: Double = 0
+    @State private var burstRotation: Double = 0
+    @State private var burstDone: Bool = false
 
     var body: some View {
         VStack(spacing: 32) {
             Spacer()
 
-            Image(systemName: model.faces[model.faceIndex])
-                .font(.system(size: 80))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(AppColors.primary)
-                .rotationEffect(.degrees(model.rotation))
-                .animation(.interpolatingSpring(stiffness: 280, damping: 14), value: model.rotation)
-                .scaleEffect(model.scale)
-                .animation(.interpolatingSpring(stiffness: 280, damping: 14), value: model.scale)
-                .contentTransition(.identity)   // prevents SwiftUI cross-fade on symbol change
-                .onAppear  { model.start() }
-                .onDisappear { model.stop() }
+            // Arc ring — continues from where the press left off, then spins CW
+            Circle()
+                .trim(from: 0.0, to: 0.9382)
+                .stroke(AppColors.primary,
+                        style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                .frame(width: 80, height: 80)
+                .rotationEffect(.degrees(ringVM.baseRotation + burstRotation + steadyRotation))
+                .onAppear {
+                    let energy = ringVM.releaseEnergy   // degrees accumulated during press
+                    let burstDeg = max(energy * 3.0, 360.0)  // at least one full spin CW
+                    let burstDuration = burstDeg / 720.0      // 720°/s initial burst speed
+                    let burstDurationClamped = max(burstDuration, 0.3)
+
+                    // Phase 1: fast burst proportional to press energy
+                    withAnimation(.easeOut(duration: burstDurationClamped)) {
+                        burstRotation = burstDeg
+                    }
+                    // Phase 2: steady continuous spin after burst settles
+                    DispatchQueue.main.asyncAfter(deadline: .now() + burstDurationClamped * 0.7) {
+                        withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
+                            steadyRotation = 360
+                        }
+                    }
+                }
 
             VStack(spacing: 8) {
                 Text("Rolling the dice...")
