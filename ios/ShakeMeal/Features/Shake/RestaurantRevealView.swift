@@ -9,6 +9,7 @@ struct RestaurantRevealView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var isFavorited = false
     @State private var favoriteLoading = false
+    @State private var pressStartTime: Date? = nil
 
     // Self-contained entry animation.
     // Driven by onAppear so it fires reliably regardless of what the parent
@@ -49,10 +50,17 @@ struct RestaurantRevealView: View {
                 .simultaneousGesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { _ in
+                            if pressStartTime == nil {
+                                pressStartTime = Date()
+                            }
                             ringVM.startPress()
                         }
                         .onEnded { _ in
+                            let elapsed = pressStartTime.map { Date().timeIntervalSince($0) } ?? 0
+                            pressStartTime = nil
                             ringVM.endPress()
+                            // Only refresh if held long enough for the button to visually dim
+                            guard elapsed >= 0.35 else { return }
                             SoundPlayer.click()
                             onShakeAgain()
                         }
