@@ -21,27 +21,52 @@ struct RestaurantRevealView: View {
     @State private var slideOpacity: Double = 0
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: 0) {
-                    photoHeader
+        ScrollView {
+            VStack(spacing: 0) {
+                photoHeader
 
-                    VStack(alignment: .leading, spacing: 20) {
-                        nameSection
-                        metaRow
-                        Divider()
-                        actionButtons
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 24)
+                VStack(alignment: .leading, spacing: 20) {
+                    nameSection
+                    metaRow
+                    Divider()
+                    actionButtons
                 }
-            }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 24)
 
-            // Ring button lives OUTSIDE the ScrollView so iOS doesn't
-            // delay the touch — we control the dim timing ourselves.
-            ringButton
-                .padding(.top, 0)
-                .padding(.bottom, 36)
+                Button { } label: {
+                    Circle()
+                        .trim(from: 0.0, to: 0.9382)
+                        .stroke(AppColors.primary,
+                                style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                        .frame(width: 80, height: 80)
+                        .rotationEffect(.degrees(ringVM.displayAngle))
+                        .animation(
+                            .spring(response: 0.8, dampingFraction: 0.42),
+                            value: ringVM.baseRotation
+                        )
+                        .opacity(ringVM.isPressing ? 0.35 : 1.0)
+                        .animation(.easeIn(duration: kRingHoldThreshold), value: ringVM.isPressing)
+                }
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { _ in
+                            if pressStartTime == nil {
+                                pressStartTime = Date()
+                            }
+                            ringVM.startPress()
+                        }
+                        .onEnded { _ in
+                            let elapsed = pressStartTime.map { Date().timeIntervalSince($0) } ?? 0
+                            pressStartTime = nil
+                            ringVM.endPress()
+                            guard elapsed >= kRingHoldThreshold else { return }
+                            SoundPlayer.click()
+                            onShakeAgain()
+                        }
+                )
+                .padding(.top, 16)
+                .padding(.bottom, 48)
                 .task {
                     while !Task.isCancelled {
                         try? await Task.sleep(for: .seconds(Double.random(in: 6.0...12.0)))
@@ -49,6 +74,7 @@ struct RestaurantRevealView: View {
                         ringVM.autoBounce()
                     }
                 }
+            }
         }
         .background(.white)
         .offset(y: slideOffset)
@@ -63,44 +89,6 @@ struct RestaurantRevealView: View {
             await checkFavoriteStatus()
             recordHistory()
         }
-    }
-
-    // MARK: - Ring button (outside ScrollView)
-
-    private var ringButton: some View {
-        Button { } label: {
-            Circle()
-                .trim(from: 0.0, to: 0.9382)
-                .stroke(AppColors.primary,
-                        style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                .frame(width: 80, height: 80)
-                .rotationEffect(.degrees(ringVM.displayAngle))
-                .animation(
-                    .spring(response: 0.8, dampingFraction: 0.42),
-                    value: ringVM.baseRotation
-                )
-                // Our own dim: easeIn over exactly kRingHoldThreshold seconds.
-                // When the dim completes the user knows they can release.
-                .opacity(ringVM.isPressing ? 0.35 : 1.0)
-                .animation(.easeIn(duration: kRingHoldThreshold), value: ringVM.isPressing)
-        }
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    if pressStartTime == nil {
-                        pressStartTime = Date()
-                    }
-                    ringVM.startPress()
-                }
-                .onEnded { _ in
-                    let elapsed = pressStartTime.map { Date().timeIntervalSince($0) } ?? 0
-                    pressStartTime = nil
-                    ringVM.endPress()
-                    guard elapsed >= kRingHoldThreshold else { return }
-                    SoundPlayer.click()
-                    onShakeAgain()
-                }
-        )
     }
 
     // MARK: - Sub-views
