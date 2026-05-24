@@ -451,7 +451,7 @@ make migrate-reset # drop all tables (destructive)
 
 ## Stable Baseline
 
-Current baseline: **`TBD`** — nav bar polish + reliable click sound.
+Current baseline: **`fc63469`** — nav bar polish + reliable click sound.
 
 - Restaurant info: flat section below photo (no card/rounded rect), white page background, 340pt photo header
 - Shake-again: arc ring (6.18% gap, 80pt, round linecap); hold 1.0s to refresh (ring dims easeIn); quick tap does nothing; CCW rotation during hold; auto-bounce spring cancelled on press start to prevent conflict
