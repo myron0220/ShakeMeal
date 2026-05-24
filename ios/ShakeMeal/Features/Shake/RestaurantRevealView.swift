@@ -4,7 +4,7 @@ import MapKit
 // How long the ring must be held before release triggers refresh.
 // This exactly matches the dim animation duration so visual feedback
 // and trigger threshold are always in sync.
-private let kRingHoldThreshold: TimeInterval = 0.4
+private let kRingHoldThreshold: TimeInterval = 1.0
 
 struct RestaurantRevealView: View {
     let restaurant: Restaurant
