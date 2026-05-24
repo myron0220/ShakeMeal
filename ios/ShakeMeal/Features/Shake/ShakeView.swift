@@ -20,6 +20,14 @@ final class RingViewModel: ObservableObject {
     func startPress() {
         guard !isPressing else { return }
         isPressing = true
+        // Cancel any in-flight bounce spring.
+        // +360 is visually identical to +0 (same rendered angle) but is a real
+        // value change, so SwiftUI replaces the running spring with this
+        // disabled transaction — the ring snaps to the same visual position
+        // with no jump, and the spring stops fighting the CCW press.
+        var tx = Transaction()
+        tx.disablesAnimations = true
+        withTransaction(tx) { baseRotation += 360 }
         pressTask?.cancel()
         pressTask = Task { [weak self] in
             // ~60°/s CCW → -1° per 16 ms
