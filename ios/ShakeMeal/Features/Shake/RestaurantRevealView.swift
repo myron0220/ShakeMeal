@@ -118,7 +118,7 @@ struct RestaurantRevealView: View {
                     image
                         .resizable()
                         .scaledToFill()
-                        .frame(maxWidth: .infinity, minHeight: 280, maxHeight: 280)
+                        .frame(maxWidth: .infinity, minHeight: 340, maxHeight: 340)
                         .clipped()
                 } placeholder: {
                     placeholderGradient
@@ -127,7 +127,7 @@ struct RestaurantRevealView: View {
                 placeholderGradient
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 280, maxHeight: 280)
+        .frame(maxWidth: .infinity, minHeight: 340, maxHeight: 340)
         .clipped()
     }
 
