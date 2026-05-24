@@ -40,7 +40,7 @@ struct RestaurantRevealView: View {
             // Ring button lives OUTSIDE the ScrollView so iOS doesn't
             // delay the touch — we control the dim timing ourselves.
             ringButton
-                .padding(.top, 4)
+                .padding(.top, 16)
                 .padding(.bottom, 36)
                 .task {
                     while !Task.isCancelled {
