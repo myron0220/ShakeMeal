@@ -133,7 +133,8 @@ struct ShakeView: View {
                 // ── Location header (leading) ───────────────────────────────
                 ToolbarItem(placement: .topBarLeading) {
                     locationTitle
-                        .padding(.bottom, 20)
+                        .padding(.top, 30)
+                        .padding(.bottom, 40)
                 }
                 // ── Filter (trailing) ───────────────────────────────────────
                 ToolbarItem(placement: .topBarTrailing) {
@@ -146,7 +147,8 @@ struct ShakeView: View {
                                              ? AppColors.textSecondary
                                              : AppColors.primary)
                     }
-                    .padding(.bottom, 20)
+                    .padding(.top, 30)
+                    .padding(.bottom, 40)
                 }
             }
             .sheet(isPresented: $viewModel.isFilterPresented) {
@@ -160,12 +162,8 @@ struct ShakeView: View {
     @ViewBuilder
     private var locationTitle: some View {
         if let name = locationManager.placeName {
-            // Has address — show "Near you" + street, both left-aligned
+            // Has address — show street only, left-aligned
             VStack(alignment: .leading, spacing: 1) {
-                Text("Near you")
-                    .font(.system(size: 11, weight: .regular))
-                    .foregroundStyle(AppColors.textSecondary)
-
                 HStack(spacing: 3) {
                     Image(systemName: "location.fill")
                         .font(.system(size: 11, weight: .medium))
@@ -182,10 +180,10 @@ struct ShakeView: View {
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
         } else if locationManager.hasPermission {
             // Permission granted but geocode not yet ready
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Near you")
-                    .font(.system(size: 11, weight: .regular))
-                    .foregroundStyle(AppColors.textSecondary)
+            HStack(spacing: 3) {
+                Image(systemName: "location.fill")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(AppColors.primary)
                 Text("Locating…")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(AppColors.textSecondary)
@@ -231,7 +229,7 @@ private struct IdleShakeView: View {
             Spacer()
 
             Button {
-                SoundPlayer.click()
+                // SoundPlayer.click()
                 onShake()
             } label: {
                 Label("Shake Now", systemImage: "hand.tap.fill")

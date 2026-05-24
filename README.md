@@ -431,7 +431,7 @@ make migrate-reset # drop all tables (destructive)
 | iOS — Favorites + History in Profile | ✅ Done | 2-tab layout (Shake + Profile); ❤️ toggle on result card; history auto-recorded on card appear; pull-to-refresh |
 | Backend — `GET /api/v1/auth/me` | ✅ Done | Returns authenticated user's profile; protected route via JWT middleware |
 | iOS — Profile name persists after restart | ✅ Done | `AuthManager.fetchMe()` called on init when token exists; name/email shown immediately without re-login |
-| iOS — Button click sound (Shake Now + Shake Again) | ✅ Done | Nintendo Switch–style click: light haptic + system tick sound `1057` on both shake buttons |
+| iOS — Button click sound (Shake Again) | ✅ Done | Nintendo Switch–style click: light haptic + pre-registered `Tink.caf` (`AudioServicesCreateSystemSoundID`) on Shake Again ring release; Shake Now sound removed |
 | iOS — Restaurant photo header | ✅ Done | `scaledToFill` + `maxWidth: .infinity` fix; no more squishing |
 | iOS — Unsplash photos in mock data | ✅ Done | All 5 mock restaurants have real food photos for local dev/testing |
 | iOS — Nav bar dedicated area | ✅ Done | Removed `ignoresSafeArea` — title + filter icon no longer overlap the photo |
@@ -440,7 +440,7 @@ make migrate-reset # drop all tables (destructive)
 | iOS — Custom tab bar | ✅ Done | Spring scale bounce (1.3×) + light haptic on tap; `safeAreaInset` layout — no overlap with content |
 | iOS — Real device testing | ✅ Done | Team ID set in `project.yml`; Sign in with Apple removed from entitlements for Personal Team |
 | iOS — Restaurant card slide-up animation | ✅ Done | `onAppear`-driven spring (guaranteed to fire); content layer clipped so spring overshoot can't cover nav bar |
-| iOS — Real-time location in nav bar | ✅ Done | `CLGeocoder` reverse-geocodes on every location update; shows "Near you / 📍 3900 Confederation Pkwy" top-left; falls back to "ShakeMeal" when permission denied |
+| iOS — Real-time location in nav bar | ✅ Done | `CLGeocoder` reverse-geocodes on every location update; shows 📍 street address top-left (no "Near you" label); falls back to "ShakeMeal" when permission denied; nav bar items have top+bottom padding for breathing room |
 | iOS — Favorites + History capped at 3 items | ✅ Done | `Array.prefix(3)` in `ProfileView` |
 | Backend — Deployed to Fly.io | ⚠️ Trial ended | Free trial expired; needs credit card or migration to Neon/Supabase |
 | Backend — Viper BindEnv fix | ✅ Done | `AutomaticEnv()` + `Unmarshal()` don't work together; explicit `BindEnv` calls added for all keys |
@@ -451,7 +451,7 @@ make migrate-reset # drop all tables (destructive)
 
 ## Stable Baseline
 
-Current baseline: **`4eb1d99`** — press-and-hold ring, RingViewModel, Exploring loading screen.
+Current baseline: **`TBD`** — nav bar polish + reliable click sound.
 
 - Restaurant info: flat section below photo (no card/rounded rect), white page background, 340pt photo header
 - Shake-again: arc ring (6.18% gap, 80pt, round linecap); hold 1.0s to refresh (ring dims easeIn); quick tap does nothing; CCW rotation during hold; auto-bounce spring cancelled on press start to prevent conflict
@@ -459,7 +459,8 @@ Current baseline: **`4eb1d99`** — press-and-hold ring, RingViewModel, Explorin
 - Loading screen: "Exploring…" title; ring starts from last press angle; fast CW burst proportional to press energy, then steady spin
 - Tab bar: compact (icon 16pt, label 8pt, 5pt vertical padding)
 - Shake → restaurant reveal (guaranteed spring slide-up, no flash, nav bar never covered)
-- Real-time location in nav bar top-left (CLGeocoder, 1/3 screen width, truncates cleanly)
+- Nav bar top-left: 📍 street address only (no "Near you" label); padding `.top 30 / .bottom 40` on both toolbar items
+- Click sound: pre-registered `Tink.caf` via `AudioServicesCreateSystemSoundID` (reliable, no dropout); only on Shake Again ring release
 - Favorites + history (3-item cap in ProfileView)
 - Mock data: 22 restaurants across 12 cuisines with Unsplash photos
 - Backend: local `go run ./cmd/server` with mock provider
