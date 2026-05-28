@@ -133,7 +133,7 @@ struct ShakeView: View {
                 // ── Location header (leading) ───────────────────────────────
                 ToolbarItem(placement: .topBarLeading) {
                     locationTitle
-                        .padding(.top, 30)
+                        .padding(.top, 40)
                         .padding(.bottom, 40)
                 }
                 // ── Filter (trailing) ───────────────────────────────────────
@@ -147,7 +147,7 @@ struct ShakeView: View {
                                              ? AppColors.textSecondary
                                              : AppColors.primary)
                     }
-                    .padding(.top, 30)
+                    .padding(.top, 40)
                     .padding(.bottom, 40)
                 }
             }
