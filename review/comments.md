@@ -1,0 +1,6 @@
+- Jelle:
+  - feature -> shift left and right the pictures (Royce: comments / ranking)
+- Royce:
+  - shopping in addition to restaurant (e.g. grils popular search for `clothes`, `shoes`)
+  - the refresh button is not user friendly (people don't know how to interact)
+  - add a app name + logo on the top
